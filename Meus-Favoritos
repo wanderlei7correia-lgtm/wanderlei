@@ -1,0 +1,4305 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Meus Favoritos</title>
+<link rel="shortcut icon" href="meus-favoritos.png">
+<script src="js/sortable.min.js"></script>
+<script src="js/lucide.min.js"></script>
+<script src="cordova.js"></script>
+
+<!-- Adicione o CSS do Cropper.js no head do seu HTML -->
+<link  href="css/cropper.min.css" rel="stylesheet"/>
+
+<style>
+/* corpo padrão */
+body {
+	font-family: sans-serif;
+	background:#f0f2f5;
+	margin:0;
+	padding:12px;
+	font-size:14px;
+/*
+	user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+	*/
+}
+
+@font-face {
+  font-family: "sapien";
+  src:url("css/sapien.ttf");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "dreams";
+  src:url("css/dreams.ttf");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Aplica transição suave a cores de fundo, texto e botões */
+body,
+body * {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+#splash-screen {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: #fff;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+body[data-theme="dark"] #splash-screen {
+  background: #000;
+}
+
+.topBotoes {
+	padding:4px 8px;
+	cursor:pointer;
+	border:1px solid #e0e0e0;
+	background:#fff; 
+	color:#333; 
+	float:right;
+	margin-right:6px;
+	width:40px;
+	height:40px;
+	border-radius:8px; 
+}
+
+h1 { margin:0 0 10px 0; font-size:1.4rem; }
+
+/* toolbar */
+#toolbar { 
+  margin-bottom:8px; 
+  display:flex; 
+  gap:6px; 
+  flex-wrap:wrap; 
+}
+#toolbar button, .logoMF button { 
+  flex:1 1 auto; 
+  padding:10px; 
+  border:1px solid #e0e0e0;
+  border-radius:8px; 
+  background:#fff; 
+  color:#333; 
+  cursor:pointer; 
+  min-width:80px; 
+  font-size:14px; 
+}
+
+/* grid / cards */
+.grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:10px; }
+.card {
+  background:#fff;
+  border-radius:10px;
+  padding:14px 10px 10px; /* topo maior (36px) */
+  text-align:center;
+  box-shadow:0 2px 6px rgba(0,0,0,0.08);
+  position:relative;
+  cursor:default;
+}
+.card a { text-decoration:none; color:#222; display:flex; flex-direction:column; align-items:center; gap:6px; }
+.card img{ width:40px; height:40px; border-radius:8px;}
+.card span.title { 
+  display:block; 
+  word-break:break-word;
+  overflow-wrap:anywhere; 
+  font-size:12px; 
+  font-weight:300; 
+}
+.card .meta { font-size:13px; color:#666; word-break:break-word; }
+
+/* === AÇÕES NOS CARDS (menores) === */
+.card .actions {
+  position:absolute;
+  top:6px;
+  right:6px;
+  display:flex;
+  gap:3px;
+  align-items:center;
+  min-height:30px;
+}
+.card .actions button {
+  font-size:11px;
+  padding:2px 3px;
+  border-radius:3px;
+  background:none;
+  border:0;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.card .actions button:active { transform:scale(.95); }
+
+/* === PASTA === */
+.folder { background:#fff; border:1px solid #ccc; border-radius:10px; padding:12px 8px; margin:7px 0; position:relative; }
+.folder .header { display:flex; align-items:center; gap:8px; padding-right:48px; cursor:pointer; }
+.folder .title { 
+  flex:1 1 auto; 
+  font-size:16px; 
+  _font-weight:700; 
+  word-break:break-word; 
+  color: #333;
+}
+
+@media (min-width:600px){
+.folder { margin:8px 0; }
+}
+
+/* === AÇÕES NAS PASTAS (maiores) === */
+.folder .header .actions { position:absolute; right:8px; top:6px; display:flex; gap:6px; }
+.folder .header .actions button { 
+  background:none; 
+  border:0; 
+  padding:4px 6px; 
+  border-radius:5px; 
+  cursor:pointer; 
+  font-size:13px; 
+  display:flex; 
+  align-items:center; 
+  justify-content:center; 
+}
+.folder .header .actions button:active { transform:scale(.95); }
+
+.subfolders, .folder .grid { margin-top:8px; }
+
+#_foldersContainer { margin:0px 0px 7px 0px;}
+
+/* efeito acordeão: apenas mostrar grid se pasta aberta */
+.folder .grid, .folder .subfolders { display:none; }
+.folder.open .grid, .folder.open .subfolders { display:grid; }
+
+/* dragged-over hint */
+.grid.dragover { outline: 2px dashed #4cafef; }
+
+/* toast */
+.toast { position:fixed; left:20px; bottom:20px; background:#333; color:white; padding:8px 12px; border-radius:6px; z-index:2000; display:flex; align-items:center; gap:8px; }
+.toast button { background:#555; color:white; border:0; padding:6px 8px; border-radius:6px; cursor:pointer; }
+
+/* scroll top */
+#scrollTopBtn { position:fixed; right:20px; bottom:20px; width:44px; height:44px; border-radius:50%; border:0; background:#DAA520; color:#333; font-size:26px; cursor:pointer; display:none; box-shadow:0 6px 18px rgba(0,0,0,0.18); padding-bottom:3px;}
+#scrollTopBtn:hover{ transform:scale(1.06); }
+
+/* Ícones dentro dos cards */
+.card .actions svg { width: 14px; height: 14px; }
+
+/* Ícones dentro das pastas */
+.folder .actions svg { width: 14px; height: 14px; }
+
+/* responsividade */
+
+@media (max-width:600px){
+  .grid { gap:8px; grid-template-columns:repeat(auto-fill,minmax(100px,1fr)); }
+}
+
+@media (min-width:600px){
+  .folder .title { 
+    font-size:20px;
+	padding: 6px 8px;	
+  }
+  .topBotoes {
+	width:50px;
+	height:50px;
+	border-radius:10px; 
+	font-size:18px;
+  }
+  #toolbar button {
+	font-size:15px;
+  }
+  .card span.title {
+	font-size:14px;
+  }
+}
+
+#footer {
+  border:1px solid #e0e0e0;
+  margin-top: 8px;
+  padding: 14px 12px;
+  background: #fff;
+  color: #333;
+  border-radius: 10px;
+  text-align: center;
+  font-family: sans-serif;
+  box-shadow: 0 -2px 6px rgba(0,0,0,0.1);
+}
+
+#footer .footer-title {
+  font-size: 1.2rem;
+  _font-weight: 700;
+  margin-bottom: 4px;
+}
+
+#footer .footer-subtitle {
+  font-size: 0.9rem;
+  color: #666;
+  margin-bottom: 2px;
+}
+
+#footer .footer-note {
+  font-size: 0.8rem;
+  color: #aaa;
+  text-decoration:none;
+}
+
+.folder .folder-arrow {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  font-size: 14px;
+  color: #666;
+  cursor: default;
+  margin-right: -40px;
+}
+
+.folder.open .folder-arrow {
+  transform: rotate(0deg);
+}
+
+.edit-mode .folder .folder-arrow {
+  opacity: 0 !important;
+}
+
+/*MODO DARK*/
+
+body[data-theme="dark"] {
+  background-color: #121212;
+  color: #eee;
+}
+
+body[data-theme="dark"] button {
+  background-color: #222;
+  color: #eee;
+  border-color: #444;
+}
+
+body[data-theme="dark"] #toolbar button {
+  background-color: #222;
+  color: #eee;
+  border-color: #444;
+}
+
+body[data-theme="dark"] #footer {
+  background-color: #222;
+  color: #eee;
+  border-color: #444;
+}
+
+body[data-theme="dark"] .card {
+  background-color: #444;
+  color: #eee;
+  border-color: #444;
+}
+
+body[data-theme="dark"] .title {
+  color: #ddd;
+}
+
+body[data-theme="dark"] .folder {
+  background-color: #222;
+  color: #eee;
+  border-color: #444;
+}
+
+body[data-theme="dark"] .logoMF {
+  background-color: #000;
+  color: #eee;
+  border-color: #444;
+}
+
+body[data-theme="dark"] .linha {
+  border-bottom: 1px solid #444;
+}
+
+/* ESTILO DE CONFIRMACAO */
+      .confirm-overlay {
+        position: fixed;
+	    top: 0;
+		left: 0;
+        width: 100%;
+		height: 100%;
+        background: rgba(0,0,0,0.4);
+        display: flex;
+		justify-content: center;
+		align-items: center;
+        z-index: 9999;
+      }
+      .confirm-box {
+		border: .5px solid #ddd;
+        background: #fff;
+        color: #000;
+        padding: 20px 30px;
+        border-radius: 12px;
+        text-align: center;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        max-width: 300px;
+        font-family: sans-serif;
+        animation: pop 0.2s ease;
+      }
+      .confirm-box h3 { margin-bottom: 15px; font-size: 16px; }
+      .confirm-buttons {
+        display: flex; justify-content: space-around; margin-top: 10px;
+      }
+      .confirm-buttons button {
+        border: none; border-radius: 8px;
+        padding: 8px 14px; cursor: pointer;
+        font-size: 14px; transition: 0.2s;
+	    margin: 8px;
+      }
+      .btn-ok { background: #4CAF50; color: #fff; }
+      .btn-ok:hover { background: #45a049; }
+      .btn-cancel { background: #ccc; color: #000; }
+      .btn-cancel:hover { background: #bbb; }
+
+      /* 🌙 Modo escuro */
+      body[data-theme="dark"] .confirm-box {
+        background: #222;
+        color: #eee;
+        box-shadow: 0 4px 20px rgba(255,255,255,0.1);
+		border: .5px solid #444;
+      }
+      body[data-theme="dark"] .btn-ok {
+        background: #357a38;
+      }
+      body[data-theme="dark"] .btn-ok:hover {
+        background: #2e7031;
+      }
+      body[data-theme="dark"] .btn-cancel {
+        background: #555;
+        color: #fff;
+      }
+      body[data-theme="dark"] .btn-cancel:hover {
+        background: #666;
+      }
+
+      @keyframes pop { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+.logoMF {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: #f0f2f5;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: -1;
+  _display:none;
+}
+
+</style>
+</head>
+<body>
+
+<!-- Splash customizado -->
+<div id="splash-screen" onclick="showBarras();">
+  <img src="meus-favoritos.png" alt="Logo" style="width: 240px; height: 240px;">
+</div>
+
+<script>
+
+
+function aplicarTamanhoImg(salvar = false) {
+  // pega o valor salvo; se não houver, assume true = grande
+  let grd = localStorage.getItem('confIcongrd');
+  grd = grd !== null ? grd === 'true' : true; // padrão true = grande
+
+  if (salvar) {
+    grd = !grd; // alterna
+    localStorage.setItem('confIcongrd', grd);
+  }
+
+  const size = grd ? 70 : 40; // true = grande, false = pequeno
+  document.querySelectorAll('.card img').forEach(img => {
+    img.style.maxWidth = size + 'px';
+    img.style.maxHeight = size + 'px';
+    img.style.width = 'auto';
+    img.style.height = 'auto';
+    img.style.objectFit = 'contain'; // garante proporção dentro do limite
+	});
+}
+
+function ocultarLogo() {
+  const logo = document.getElementById("divLogo");
+  const el = document.getElementById("logoMF");
+
+  const dados = localStorage.getItem("bookmarks");
+  
+  if(dados) {
+	  logo.removeAttribute("style");
+	  el.style.display="none";
+  }
+}
+
+function zero(elem,quant) {
+	var valor = "", masc = "0000000000";
+	var dif = quant-elem.toString().length;
+	valor = masc.substr(0,dif)+elem;
+	return valor;
+}
+
+function fRandom(i,f) {
+	if (i > f) {numInicial = f;numFinal = i+1;}else{numInicial = i;numFinal = f+1;}
+	numRandom = Math.floor((Math.random()*(numFinal-numInicial))+numInicial);
+	return numRandom;
+}
+
+window.addEventListener("load", () => {
+  // mantém splash visível por 2 segundos
+  setTimeout(() => {
+    const splash = document.getElementById("splash-screen");
+    if (splash) splash.style.display = "none";
+
+	splash.style.transition = "opacity 0.5s";
+	splash.style.opacity = "0";
+	setTimeout(() => splash.remove(), 512);
+
+  }, 1024);
+});
+
+
+function reiniciarApp() {
+confirmarAcao('♻️ '+LANG.lang_reiniciar_app, ok => { if (ok) {
+ location.href='?';
+  }});
+}
+// 🌐️
+</script>
+
+  <button id="showToolBar" class="topBotoes" style="float:left;">❎</button>
+  <button id="toggleTheme" class="topBotoes" style="float:left;">🌙</button>
+  <!-- <button id="botReload" class="topBotoes" style="float:left;" onclick="reiniciarApp();">♻️</button> -->
+  <button id="btn-settings" class="topBotoes" style="float:left;"><span id="lang_flag_idioma">🇧🇷</span></button>
+  <button id="reflexoesBtn" class="topBotoes" style="float:left;">🤔</button>
+
+  <button id="configBtn" class="topBotoes" style="margin-right:0px;">⚙</button>
+  <button id="helpBtn" class="topBotoes">❔</button>
+  <button id="privacyBtn" class="topBotoes">🔒</button>
+  <button id="resetBtn" class="topBotoes">🗑️</button>
+  <div style="clear:both;margin-bottom:8px;"></div>
+
+<div id="toolbar">
+  <button id="editModeBtn"><span id="lang_editar">✏️ Editar</span></button>
+  <button onclick="addCardToRoot()">⭐️ <span id="lang_favorito">Favorito</span>+</button>
+  <button onclick="addFolder()">📁 <span id="lang_pasta">Pasta</span>+</button>
+  <button onclick="restaurarDados();">📂 <span id="lang_restaurar">Restaurar</span></button>
+  <input id="importFile" type="file" accept=".html" style="display:none">
+<!--   <button onclick="confirmarAcao('Salvar o backup no dispositivo?', ok => { if (ok) exportBookmarks(); })">💾 <span id="lang_salvar">Salvar</span></button>
+ -->  <button id="login-btn">Login</button>
+  <button id="logout-btn" style="display:none;" onclick="logoutGoogle();">Logout</button>
+  <button id="backup-btn">💾 <span id="lang_nuvem">Nuvem</span></button>
+</div>
+
+<div id="rootGrid" class="grid"></div>
+<div id="foldersContainer"></div>
+
+<style>
+
+#rootGrid:empty + #toolbar,
+:has(#rootGrid:empty) #toolbar {
+  margin-bottom: 0;
+}
+
+.fontPeq {
+	font-size: 90%;
+	word-break:break-word;
+}
+.fontGrd {
+	font-size: 120%;
+	font-family: sans-serif;
+	font-weight:bold;
+}
+
+.folders-list {
+  height:390px;
+  max-height:390px;
+  overflow-y:auto;
+  margin-bottom:12px;
+  font-size:18px;
+}
+.foldersButton {
+  border-radius:8px;
+  font-size:18px;
+}
+input[type="checkbox"] {
+  transform: scale(1.5);
+  margin: 8px;
+}
+.folders-list::-webkit-scrollbar {
+  width: 6px;
+}
+.folders-list::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.3);
+  border-radius: 3px;
+}
+.folders-list::-webkit-scrollbar-track {
+  background: rgba(0,0,0,0.05);
+}
+
+@media (max-width: 380px) {
+	  #botReload, #reflexoesBtn, #xBotao {
+		display: none;
+	  }
+
+	div.modal-content  {
+	  padding: 10px;
+	  max-width: 320px;
+	  width: 320px;
+	  left: 20px;
+	  right: 20px;
+
+	}
+
+	/*
+	div.alerta-overlay, div.confirm-box, div.dynamic-modal-overlay {
+	  max-width: 320px;
+	  width: 320px;
+	  left: 20px;
+	  right: 20px;
+	}
+	*/
+
+	.folders-list {
+	  height:280px;
+	  max-height:280px;
+	  font-size:16px;
+	}
+
+}
+
+</style>
+
+<div id="importModal" class="modal" style="display:none;">
+  <div class="modal-content">
+    <h3>📦 <span id="lang_import_past_sel">Importar pastas selecionadas</span></h3>
+    <div id="foldersList" class="folders-list"></div>
+    <p><button id="btnImportarConfirmar" class="btn-ok foldersButton"><span id="lang_importar">Importar</button>
+    <button id="btnImportarCancelar" class="btn-cancel foldersButton"><span id="lang_cancelar">Cancelar</button></p>
+  </div>
+</div>
+
+<script>
+const importModalBox = document.getElementById('importModal');
+
+// Fecha ao clicar fora do conteúdo
+window.addEventListener('click', function(event) {
+  if (event.target === importModalBox) {
+    importModalBox.style.display = 'none';
+  }
+});
+
+</script>
+
+<button id="scrollTopBtn" title="Voltar ao topo">⇧</button>
+
+<!-- <button id="backup-btn" style="display:none;">Backup Google Drive</button> -->
+
+<script>
+
+function showToast(message, type = "info", duration = 3000) {
+    // Cria o container de toasts se não existir
+	
+	if (!duration) duration = 3000;
+    let container = document.getElementById("toast-container");
+    if (!container) {
+        container = document.createElement("div");
+        container.id = "toast-container";
+        container.style.position = "fixed";
+        container.style.bottom = "60px";
+        container.style.left = "50%";
+        container.style.transform = "translateX(-50%)";
+        container.style.display = "flex";
+        container.style.flexDirection = "column";
+        container.style.alignItems = "center";
+        container.style.gap = "10px";
+        container.style.zIndex = 9999;
+        document.body.appendChild(container);
+    }
+
+    // Cria o toast
+    const toast = document.createElement("div");
+    toast.textContent = message;
+    toast.style.padding = "10px 20px";
+    toast.style.borderRadius = "5px";
+    toast.style.fontFamily = "sans-serif";
+    toast.style.fontSize = "14px";
+    toast.style.opacity = "0";
+    toast.style.transition = "opacity 0.5s, transform 0.5s";
+    toast.style.transform = "translateY(20px)";
+    toast.style.color = "#fff";
+    toast.style.minWidth = "200px";
+    toast.style.textAlign = "center";
+
+    // Define cores conforme o tipo
+    switch(type.toLowerCase()) {
+        case "success":
+            toast.style.background = "#4caf50"; // verde
+            break;
+        case "error":
+            toast.style.background = "#f44336"; // vermelho
+            break;
+        case "warning":
+            toast.style.background = "#ff9800"; // laranja
+            break;
+        default:
+            toast.style.background = "#666"; // padrão cinza escuro
+    }
+
+    container.appendChild(toast);
+
+    // Força reflow para iniciar animação
+    requestAnimationFrame(() => {
+        toast.style.opacity = "1";
+        toast.style.transform = "translateY(0)";
+    });
+
+    // Remove o toast após a duração
+    setTimeout(() => {
+        toast.style.opacity = "0";
+        toast.style.transform = "translateY(20px)";
+        toast.addEventListener("transitionend", () => {
+            toast.remove();
+            // Remove container se estiver vazio
+            if (container.childElementCount === 0) {
+                container.remove();
+            }
+        });
+    }, duration);
+}
+
+function isMobile() {
+  return /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent);
+}
+
+// Detecta se está em Cordova
+function isCordova() {
+    return typeof window.cordova !== "undefined";
+}
+
+//if(isCordova()) showToast("cordova ok"); else showToast("cordova no");
+
+const localhost = "http://localhost/meus-favoritos/www";
+const urlSite = "https://mf.seriemanancial.com";
+let caminho = localhost; // valor padrão, visível globalmente
+
+async function arquivoExiste(file) {
+  try {
+    const res = await fetch(file, { method: "HEAD" });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+arquivoExiste("online.txt").then(existe => {
+  caminho = (existe || isCordova()) ? urlSite : localhost;
+});
+
+//showToast(caminho);
+
+/*
+if (isMobile()) {
+  console.log("📱 Acessando via celular ou tablet");
+} else {
+  console.log("💻 Acessando via desktop");
+}
+*/
+
+/*
+async function temInternet() {
+  try {
+    const r = await fetch("https://clients3.google.com/generate_204", { cache: "no-store" });
+    return r.status === 204;
+  } catch {
+	showToast("Sem internet","warning",3000);
+    return false;
+  }
+}
+*/
+
+async function temInternet() {
+  try {
+    // fetch de um arquivo local do mesmo servidor
+    const r = await fetch(caminho+"/ver-conexao.txt", { cache: "no-store" });
+
+    if (r.ok) {
+      return true;  // conectividade confirmada
+    } else {
+      showToast(LANG.lang_sem_net, "warning", 3000);
+      return false;
+    }
+  } catch {
+    showToast(LANG.lang_sem_net, "warning", 3000);
+    return false;
+  }
+}
+
+
+function alertaSimples(mensagem, titulo = "Aviso", tipo = "info", tempo = 3000) {
+  // tipos: info, sucesso, erro, aviso
+  const cores = {
+    info: "#2196f3",
+    sucesso: "#4caf50",
+    erro: "#f44336",
+    aviso: "#ff9800"
+  };
+
+  if (!document.getElementById("alertaSimplesCSS")) {
+    const css = `
+		.alerta-overlay {
+			position: fixed;
+			z-index: 10000;
+			left: 0; top: 0;
+			width: 100%; height: 100%;
+			background-color: rgba(0, 0, 0, 0.5);
+
+			display: flex;          /* habilita Flexbox */
+			justify-content: center; /* centraliza horizontal */
+			align-items: center;     /* centraliza vertical */
+		}
+
+		.alerta-box {
+			background: #fff;
+			color: #000;
+			padding: 10px 20px;
+			border-radius: 12px;
+			width: 50%;
+			max-width: 500px;
+			font-family: sans-serif;
+			box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+			animation: fadeIn 0.25s ease;
+			text-align: center;
+		}
+      .alerta-box button {
+        border: none; border-radius: 8px;
+        padding: 8px 14px; cursor: pointer;
+        font-size: 14px; transition: 0.2s;
+	    margin: 8px;
+      }
+
+      @keyframes aparecer { from { transform: scale(0.9); opacity:0; } to { transform: scale(1); opacity:1; } }
+
+      body[data-theme="dark"] .alerta-box {
+        background: #222;
+        color: #eee;
+        box-shadow: 0 4px 20px rgba(255,255,255,0.1);
+		border: .5px solid #444;
+      }
+
+      body[data-theme="dark"] .alerta-box button {
+        background: #555;
+        color: #fff;
+      }
+    `;
+    const style = document.createElement("style");
+    style.id = "alertaSimplesCSS";
+    style.textContent = css;
+    document.head.appendChild(style);
+  }
+
+  const overlay = document.createElement("div");
+  overlay.className = "alerta-overlay";
+  overlay.innerHTML = `
+    <div class="alerta-box" style="border-top:6px solid ${cores[tipo] || "#2196f3"}">
+      <h3>${titulo}</h3>
+      <p>${mensagem}</p>
+      <button id="alertBotao">OK</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const btn = overlay.querySelector("button");
+  btn.onclick = () => overlay.remove();
+
+  // auto-fechar
+  setTimeout(() => overlay.remove(), tempo);
+
+	// Fechar ao clicar fora da box
+	overlay.onclick = (e) => {
+	  if (e.target === overlay) { // só fecha se clicou no overlay, não na caixa
+		overlay.remove();
+	  }
+	};
+
+}
+
+function confirmarAcao(mensagem, callback) {
+  const overlay = document.createElement("div");
+  overlay.className = "confirm-overlay";
+  overlay.innerHTML = `
+    <div class="confirm-box">
+      <h3>${mensagem}</h3>
+      <div class="confirm-buttons">
+        <button class="btn-ok">OK</button>
+        <button class="btn-cancel">Cancelar</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const box = overlay.querySelector(".confirm-box");
+
+  // Fechar clicando em OK ou Cancelar
+  overlay.querySelector(".btn-ok").onclick = () => {
+    callback(true);
+    overlay.remove();
+  };
+  overlay.querySelector(".btn-cancel").onclick = () => {
+    callback(false);
+    overlay.remove();
+  };
+
+  // Fechar clicando fora da caixa
+  overlay.onclick = (e) => {
+    if (!box.contains(e.target)) { // clicou fora da confirm-box
+      callback(false);
+      overlay.remove();
+    }
+  };
+}
+
+function dataAtualFormatada() {
+  const agora = new Date();
+  const ano = agora.getFullYear();
+  const mes = String(agora.getMonth() + 1).padStart(2, '0');
+  const dia = String(agora.getDate()).padStart(2, '0');
+  const hora = String(agora.getHours()).padStart(2, '0');
+  const minuto = String(agora.getMinutes()).padStart(2, '0');
+
+  return `MF-BACK-${ano}-${mes}-${dia}-${hora}h-${minuto}m.html`;
+}
+
+/* ---------- UTILITÁRIOS ---------- */
+function capitalizeTitle(text) { return text.toLowerCase().replace(/\b\w/g,l=>l.toUpperCase()); }
+
+const rootGrid = document.getElementById("rootGrid");
+const foldersContainer = document.getElementById("foldersContainer");
+const editModeBtn = document.getElementById("editModeBtn");
+let editMode = false;
+let sortables = [];
+const STORAGE_KEY = "bookmarks";
+
+function addCardToRoot() {
+  if(!editMode) { showToast(LANG.lang_ativ_modo_edicao,"warning",2000); return; }
+  //if (!editMode) return;          // só permite se editMode ativo
+  addCardToGrid(rootGrid, true);  // adiciona na raiz pedindo título e URL
+}
+
+/* salvar e atualizar ícones */
+function save() {
+	//if(checkEditMode()) {
+	  localStorage.setItem(STORAGE_KEY, JSON.stringify({
+		root: rootGrid.innerHTML,
+		folders: foldersContainer.innerHTML
+	  }));
+	  lucide.createIcons();
+	  initListenersRecursively(document);
+    //}
+}
+
+function atualizarSetas(exibir) {
+  document.querySelectorAll(".folder .folder-arrow").forEach(arrow => {
+    arrow.style.display = exibir ? "inline" : "none";
+  });
+}
+
+function atualizarElementos() {
+  document.querySelectorAll("button.share-btn-front").forEach(btn => {
+    btn.style.display = editMode || localStorage.getItem('confOcultar')=='true'? "none" : "flex";
+  });
+}
+
+
+/* ---------- EDIT MODE ---------- */
+editModeBtn.addEventListener("click", ()=> toggleEditMode(!editMode));
+
+function toggleEditMode(on){
+  editMode = !!on;
+  //editModeBtn.textContent = editMode ? LANG.lang_concluir : LANG.lang_editar;
+  editModeBtn.textContent = editMode ? "🛑 Concluir" : "✏️ Editar";
+
+  //const langSpan = document.getElementById("lang_editar");
+  //langSpan.textContent = editMode ? LANG.lang_concluir : LANG.lang_editar;
+
+  document.querySelectorAll(".card .actions, .folder .header .actions").forEach(el => el.style.display = editMode ? "flex" : "none");
+  document.querySelectorAll(".card").forEach(c => c.style.cursor = editMode ? "grab" : "default");
+  document.querySelectorAll(".card").forEach(c => c.style.paddingTop = editMode ? "36px" : "14px");
+  document.querySelectorAll(".folder").forEach(f => f.style.cursor = editMode ? "grab" : "default");
+  document.querySelectorAll(".card .meta").forEach(m => m.style.display = on ? "block" : "none");
+
+  const resetBtn = document.getElementById("resetBtn");
+  //resetBtn.style.display = editMode ? "inline" : "none";
+  
+  initSortables();
+
+  //editMode = !editMode;
+  atualizarSetas(!editMode); // esconde se editando, mostra se não
+
+  atualizarElementos();
+  
+}
+
+function resetarFavoritos(reload) {
+    rootGrid.innerHTML = "";
+    foldersContainer.innerHTML = "";
+    localStorage.setItem(STORAGE_KEY,"");
+    localStorage.setItem("openFolders","");
+
+    document.querySelectorAll(".toast").forEach(t => t.remove());
+
+    //lucide.createIcons();
+    //save(); // salva estado limpo
+	if(localStorage.getItem('confDados')=="true") localStorage.clear();
+	if(reload) location.reload();
+}	
+
+resetBtn.addEventListener("click", (e) => {
+  e.stopPropagation(); // evita propagação acidental
+  //if (!editMode) return;
+
+  // única confirmação
+  confirmarAcao(LANG.lang_resetar_fav, ok => { if (ok) {
+
+	resetarFavoritos(true);
+	
+  }});
+
+});
+
+/* ---------- CRIAÇÃO DE ELEMENTOS ---------- */
+function createCardElement(title = LANG.lang_novo_fav, url = "https://") {
+  const card = document.createElement("div");
+  card.className = "card";
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.target = "_blank";
+
+  const img = document.createElement("img");
+  img.src = faviconFor(url);
+
+  const span = document.createElement("span");
+  span.className = "title";
+  span.textContent = title;
+
+  const domain = document.createElement("span");
+  domain.className = "meta";
+  try {
+    domain.textContent = new URL(url).hostname;
+  } catch {
+    domain.textContent = "";
+  }
+  domain.style.display = editMode ? "block" : "none";
+
+  a.append(img, span, domain);
+  card.appendChild(a);
+
+  // ====== ações internas (modo edição) ======
+  const actions = document.createElement("div");
+  actions.className = "actions";
+  actions.style.display = editMode ? "flex" : "none";
+
+  const btnRemove = document.createElement("button");
+  btnRemove.dataset.action = "remove";
+  btnRemove.innerHTML = `<i data-lucide="x"></i>`; // ❌
+
+  const btnShare = document.createElement("button");
+  btnShare.dataset.action = "share";
+  btnShare.innerHTML = `<i data-lucide="share-2"></i>`;
+
+  const btnEditTitle = document.createElement("button");
+  btnEditTitle.dataset.action = "edit-title";
+  btnEditTitle.innerHTML = `<i data-lucide="edit-2"></i>`;
+
+  const btnEditLink = document.createElement("button");
+  btnEditLink.dataset.action = "edit-link";
+  btnEditLink.innerHTML = `<i data-lucide="link"></i>`;
+
+  // ====== botão para alterar favicon ======
+  const btnEditFavicon = document.createElement("button");
+  btnEditFavicon.dataset.action = "edit-favicon";
+  btnEditFavicon.innerHTML = `<i data-lucide="image"></i>`;
+
+  const btnDup = document.createElement("button");
+  btnDup.dataset.action = "duplicate";
+  btnDup.innerHTML = `<i data-lucide="copy"></i>`;
+
+
+  actions.append(btnShare, btnRemove, btnEditTitle, btnEditLink, btnEditFavicon, btnDup);
+  card.appendChild(actions);
+
+  // ====== botão fixo visível sempre ======
+  const btnShareFront = document.createElement("button");
+  btnShareFront.className = "share-btn-front";
+  btnShareFront.innerHTML = `<i data-lucide="share-2" width="14" height="14"></i>`;
+  btnShareFront.title = "Compartilhar";
+
+  // vincula o evento assim que listeners forem inicializados
+  btnShareFront.addEventListener("click", e => {
+    e.stopImmediatePropagation();
+    e.preventDefault();
+    const originalShare = card.querySelector("[data-action='share']");
+    if (originalShare) originalShare.click(); // dispara o botão interno
+  });
+
+  // botão posicionado no canto superior direito
+  btnShareFront.style.position = "absolute";
+  btnShareFront.style.color = "#ddd";
+  btnShareFront.style.top = "6px";
+  btnShareFront.style.right = "6px";
+  btnShareFront.style.display = "flex";
+  btnShareFront.style.alignItems = "center";
+  btnShareFront.style.justifyContent = "center";
+  btnShareFront.style.padding = "4px";
+  btnShareFront.style.borderRadius = "50%";
+  btnShareFront.style.background = "transparent";
+  btnShareFront.style.border = "none";
+  btnShareFront.style.cursor = "pointer";
+
+  card.style.position = "relative";
+  card.appendChild(btnShareFront);
+  btnShareFront.style.display = editMode ? "none" : "block";
+  btnShare.style.display = "none";
+  atualizarShareBtnTema(card);
+
+  return card;
+}
+
+function createFolderElement(name="Nova Pasta"){
+  const folder = document.createElement("div"); folder.className="folder";
+  const header = document.createElement("div"); header.className="header";
+  const title = document.createElement("span"); title.className="title"; title.textContent=name;
+
+  const actions = document.createElement("div"); actions.className="actions"; actions.style.display=editMode?"flex":"none";
+  const btnRm = document.createElement("button"); btnRm.dataset.action="remove"; btnRm.innerHTML=`<i data-lucide="x"></i>`;
+  const btnRn = document.createElement("button"); btnRn.dataset.action="rename"; btnRn.innerHTML=`<i data-lucide="pencil"></i>`;
+  const btnAdd = document.createElement("button"); btnAdd.dataset.action="add-item"; btnAdd.innerHTML=`<i data-lucide="plus"></i>`;
+  const btnDup = document.createElement("button"); btnDup.dataset.action="duplicate"; btnDup.innerHTML=`<i data-lucide="copy"></i>`;
+  actions.append(btnRm, btnRn, btnAdd, btnDup); header.append(title, actions); folder.appendChild(header);
+
+  const grid = document.createElement("div"); grid.className="grid"; folder.appendChild(grid);
+  const subs = document.createElement("div"); subs.className="subfolders"; folder.appendChild(subs);
+  return folder;
+}
+
+function faviconFor(url){ try { return url ? "https://www.google.com/s2/favicons?sz=64&domain_url="+encodeURIComponent(url) : ""; } catch(e){ return ""; } }
+
+
+/* ---------- LISTENERS ---------- */
+function initCardListeners(card){
+  if(card._listenersInited) return; 
+  card._listenersInited = true;
+
+  const btns = card.querySelectorAll(".actions button");
+  const btnShare  = btns[0];
+  const btnRemove = btns[1];
+  const btnEditTitle = btns[2];
+  const btnEditLink  = btns[3];
+  const btnEditFavicon  = btns[4];
+  const btnDup = btns[5];
+
+  const a = card.querySelector("a");
+  const span = card.querySelector(".title");
+
+  btnRemove.addEventListener("click",(e)=>{
+    e.stopPropagation();
+    removeWithUndo(card);
+  });
+
+  btnShare.addEventListener("click",(e)=>{
+    e.stopPropagation();
+    const titulo = span.textContent;
+    const url = a.href;
+    if(navigator.share){
+      navigator.share({ title: titulo, url });
+    } else {
+      navigator.clipboard.writeText(`${titulo} - ${url}`);
+      showToast(LANG.lang_link_copiado,"success",2000);
+    }
+  });
+
+  btnEditTitle.addEventListener("click",(e)=>{
+    e.stopPropagation();
+    if(!editMode) return;
+    const n = prompt(LANG.lang_edit_tit, span.textContent);
+    if(n != null && n.trim() !== ""){
+      span.textContent = n.trim();
+      save();
+    }
+  });
+
+  btnEditLink.addEventListener("click",(e)=>{
+    e.stopPropagation();
+    if(!editMode) return;
+    const u = prompt(LANG.lang_edit_link, a.href);
+    if(u != null && u.trim() !== ""){
+      const newUrl = u.trim();
+      if(!isSafeUrl(newUrl)){
+        alertaSimples(LANG.lang_url_invalida,"Erro","erro",3000);
+        return;
+      }
+      a.href = newUrl;
+      const img = card.querySelector("img");
+      if(img) img.src = faviconFor(newUrl);
+      const meta = card.querySelector(".meta");
+      try { if(meta) meta.textContent = (new URL(newUrl)).hostname; } catch(err){ if(meta) meta.textContent = newUrl; }
+      save();
+    }
+  });
+
+/*
+btnEditFavicon.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (!editMode) return;
+
+    const img = card.querySelector("img"); // pega o favicon atual
+    const newUrl = prompt(LANG.lang_edit_icon, img.src);
+    if (newUrl && newUrl.trim() !== "") {
+        img.src = newUrl.trim(); // atualiza o favicon
+        save();
+    }
+});
+*/
+
+if(!isCordova()) {
+btnEditFavicon.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (!editMode) return;
+
+    const img = card.querySelector("img");
+
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/png";
+    input.style.display = "none";
+
+    input.addEventListener("change", () => {
+        const file = input.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = () => {
+                img.src = reader.result; // mostra o novo favicon
+                save();
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    document.body.appendChild(input);
+    input.click();
+    document.body.removeChild(input);
+});
+
+} else {
+
+////////////////////////////////////////////////
+
+document.addEventListener('deviceready', () => {
+    btnEditFavicon.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (!editMode) return;
+
+        const basePath = cordova.file.applicationDirectory + "www/img/";
+        let lastDir = sessionStorage.getItem("lastDir") || basePath;
+
+        function listDirectory(path) {
+            window.resolveLocalFileSystemURL(path, (dirEntry) => {
+                const reader = dirEntry.createReader();
+                reader.readEntries((entries) => {
+                    sessionStorage.setItem("lastDir", path); // guarda última pasta
+                    showModal(entries, path);
+                }, onError);
+            }, onError);
+        }
+
+        function showModal(entries, path) {
+            const old = document.querySelector(".cf-modal-overlay");
+            if (old) old.remove();
+
+            const overlay = document.createElement("div");
+            overlay.className = "cf-modal-overlay";
+            overlay.tabIndex = 0;
+
+            const modal = document.createElement("div");
+            modal.className = "cf-modal";
+
+            const header = document.createElement("div");
+            header.className = "cf-modal-header";
+            header.innerText = LANG.lang_explorar_icones;
+
+            const nav = document.createElement("div");
+            nav.className = "cf-path";
+            nav.innerText = path.replace(basePath, "www/img/");
+
+            const grid = document.createElement("div");
+            grid.className = "cf-grid";
+
+            // ======== NOVOS BOTÕES ========
+            /*
+			const btnAppImages = document.createElement("button");
+            btnAppImages.className = "cf-back";
+            btnAppImages.innerText = "📂 Imagens do App";
+            btnAppImages.onclick = () => listDirectory(cordova.file.applicationDirectory + "www/img/");
+			*/
+
+            /*
+			const btnChooseDevice = document.createElement("button");
+            btnChooseDevice.className = "cf-back";
+            btnChooseDevice.innerText = "📁 Escolher do Dispositivo";
+            btnChooseDevice.onclick = () => {
+                const input = document.createElement("input");
+                input.type = "file";
+                input.accept = "image/*";
+                input.onchange = (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = (evt) => {
+                        const img = card.querySelector("img");
+                        img.src = evt.target.result; // base64
+                        save();
+                        overlay.remove();
+                    };
+                    reader.readAsDataURL(file);
+                };
+                input.click();
+            };
+			*/
+
+
+/*
+const btnChooseDevice = document.createElement("button");
+btnChooseDevice.className = "cf-back";
+btnChooseDevice.innerText = "📁 Escolher do Dispositivo";
+btnChooseDevice.onclick = () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.onchange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        // 🔹 Limite de tamanho (em KB)
+        const maxSizeKB = 5; // altere aqui o limite desejado
+        const maxSize = maxSizeKB * 1024;
+        if (file.size > maxSize) {
+            alertaSimples(`Ícone Imagem muito grande! Tamanho máximo permitido: ${maxSizeKB} KB.`,'aviso',5000);
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+            const img = card.querySelector("img");
+            img.src = evt.target.result; // base64
+            save();
+            overlay.remove();
+        };
+        reader.readAsDataURL(file);
+    };
+    input.click();
+};
+*/
+
+///**********
+//Y29uc3QgYnRuQ2hvb3NlRGV2aWNlID0gZG9jdW1lbnQuY3JlYXRlRWxlbWVudCgiYnV0dG9uIik7DQpidG5DaG9vc2VEZXZpY2UuY2xhc3NOYW1lID0gImNmLWJhY2siOw0KYnRuQ2hvb3NlRGV2aWNlLmlubmVyVGV4dCA9ICLwn5OBIEVzY29saGVyIGRvIERpc3Bvc2l0aXZvIjsNCmJ0bkNob29zZURldmljZS5vbmNsaWNrID0gKCkgPT4gew0KICAgIGNvbnN0IGlucHV0ID0gZG9jdW1lbnQuY3JlYXRlRWxlbWVudCgiaW5wdXQiKTsNCiAgICBpbnB1dC50eXBlID0gImZpbGUiOw0KICAgIGlucHV0LmFjY2VwdCA9ICJpbWFnZS8qIjsNCiAgICBpbnB1dC5vbmNoYW5nZSA9IChlKSA9PiB7DQogICAgICAgIGNvbnN0IGZpbGUgPSBlLnRhcmdldC5maWxlc1swXTsNCiAgICAgICAgaWYgKCFmaWxlKSByZXR1cm47DQoNCiAgICAgICAgLy8g8J+UuSBMaW1pdGUgZGUgdGFtYW5obyBvcGNpb25hbCAoZXg6IDJNQikNCiAgICAgICAgY29uc3QgbWF4U2l6ZUtCID0gMjA0ODsgDQogICAgICAgIGlmIChmaWxlLnNpemUgPiBtYXhTaXplS0IgKiAxMDI0KSB7DQogICAgICAgICAgICBhbGVydChgSW1hZ2VtIG11aXRvIGdyYW5kZSEgTcOheGltbyBwZXJtaXRpZG86ICR7bWF4U2l6ZUtCfSBLQmApOw0KICAgICAgICAgICAgcmV0dXJuOw0KICAgICAgICB9DQoNCiAgICAgICAgLy8g8J+UuSBGdW7Dp8OjbyBwYXJhIGdlcmFyIG1pbmlhdHVyYSBlbSBiYXNlNjQgbWFudGVuZG8gcHJvcG9yw6fDo28NCiAgICAgICAgY29uc3QgZ2VyYXJNaW5pYXR1cmEgPSAoZmlsZSwgbWF4U2l6ZSA9IDcwLCBjYWxsYmFjaykgPT4gew0KICAgICAgICAgICAgY29uc3QgcmVhZGVyID0gbmV3IEZpbGVSZWFkZXIoKTsNCiAgICAgICAgICAgIHJlYWRlci5vbmxvYWQgPSAoZSkgPT4gew0KICAgICAgICAgICAgICAgIGNvbnN0IGltZyA9IG5ldyBJbWFnZSgpOw0KICAgICAgICAgICAgICAgIGltZy5vbmxvYWQgPSAoKSA9PiB7DQogICAgICAgICAgICAgICAgICAgIGxldCBsYXJndXJhID0gaW1nLndpZHRoOw0KICAgICAgICAgICAgICAgICAgICBsZXQgYWx0dXJhID0gaW1nLmhlaWdodDsNCg0KICAgICAgICAgICAgICAgICAgICBpZiAobGFyZ3VyYSA+IGFsdHVyYSAmJiBsYXJndXJhID4gbWF4U2l6ZSkgew0KICAgICAgICAgICAgICAgICAgICAgICAgYWx0dXJhID0gTWF0aC5yb3VuZCgoYWx0dXJhICogbWF4U2l6ZSkgLyBsYXJndXJhKTsNCiAgICAgICAgICAgICAgICAgICAgICAgIGxhcmd1cmEgPSBtYXhTaXplOw0KICAgICAgICAgICAgICAgICAgICB9IGVsc2UgaWYgKGFsdHVyYSA+IGxhcmd1cmEgJiYgYWx0dXJhID4gbWF4U2l6ZSkgew0KICAgICAgICAgICAgICAgICAgICAgICAgbGFyZ3VyYSA9IE1hdGgucm91bmQoKGxhcmd1cmEgKiBtYXhTaXplKSAvIGFsdHVyYSk7DQogICAgICAgICAgICAgICAgICAgICAgICBhbHR1cmEgPSBtYXhTaXplOw0KICAgICAgICAgICAgICAgICAgICB9IGVsc2UgaWYgKGxhcmd1cmEgPT09IGFsdHVyYSAmJiBsYXJndXJhID4gbWF4U2l6ZSkgew0KICAgICAgICAgICAgICAgICAgICAgICAgbGFyZ3VyYSA9IGFsdHVyYSA9IG1heFNpemU7DQogICAgICAgICAgICAgICAgICAgIH0NCg0KICAgICAgICAgICAgICAgICAgICBjb25zdCBjYW52YXMgPSBkb2N1bWVudC5jcmVhdGVFbGVtZW50KCJjYW52YXMiKTsNCiAgICAgICAgICAgICAgICAgICAgY2FudmFzLndpZHRoID0gbGFyZ3VyYTsNCiAgICAgICAgICAgICAgICAgICAgY2FudmFzLmhlaWdodCA9IGFsdHVyYTsNCiAgICAgICAgICAgICAgICAgICAgY29uc3QgY3R4ID0gY2FudmFzLmdldENvbnRleHQoIjJkIik7DQogICAgICAgICAgICAgICAgICAgIGN0eC5kcmF3SW1hZ2UoaW1nLCAwLCAwLCBsYXJndXJhLCBhbHR1cmEpOw0KDQogICAgICAgICAgICAgICAgICAgIGNvbnN0IG1pbmlCYXNlNjQgPSBjYW52YXMudG9EYXRhVVJMKCJpbWFnZS9wbmciKTsgLy8gc2VtcHJlIFBORw0KICAgICAgICAgICAgICAgICAgICBjYWxsYmFjayhtaW5pQmFzZTY0KTsNCiAgICAgICAgICAgICAgICB9Ow0KICAgICAgICAgICAgICAgIGltZy5zcmMgPSBlLnRhcmdldC5yZXN1bHQ7DQogICAgICAgICAgICB9Ow0KICAgICAgICAgICAgcmVhZGVyLnJlYWRBc0RhdGFVUkwoZmlsZSk7DQogICAgICAgIH07DQoNCiAgICAgICAgLy8g8J+UuSBHZXJhIG1pbmlhdHVyYSBlIGFwbGljYSBubyBjYXJkDQogICAgICAgIGdlcmFyTWluaWF0dXJhKGZpbGUsIDcwLCAobWluaUJhc2U2NCkgPT4gew0KICAgICAgICAgICAgY29uc3QgaW1nID0gY2FyZC5xdWVyeVNlbGVjdG9yKCJpbWciKTsNCiAgICAgICAgICAgIGltZy5zcmMgPSBtaW5pQmFzZTY0OyAvLyBiYXNlNjQgcmVkdXppZG8NCiAgICAgICAgICAgIHNhdmUoKTsgLy8gc2FsdmEgbm9ybWFsbWVudGUgKHBhcmEgYmFja3VwKQ0KICAgICAgICAgICAgb3ZlcmxheS5yZW1vdmUoKTsNCiAgICAgICAgfSk7DQogICAgfTsNCiAgICBpbnB1dC5jbGljaygpOw0KfTsNCg
+///**********
+
+// Botão "Escolher do Dispositivo"
+const btnChooseDevice = document.createElement("button");
+btnChooseDevice.className = "cf-back";
+btnChooseDevice.innerText = "📁 Escolher do Dispositivo";
+btnChooseDevice.onclick = () => {
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = "image/*";
+  input.onchange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      // Criar modal temporário com a imagem para crop
+      const overlay = document.createElement("div");
+      overlay.className = "cf-modal-overlay";
+      const modal = document.createElement("div");
+      modal.className = "cf-modal";
+      modal.style.maxWidth = "90vw";
+      modal.style.maxHeight = "80vh";
+
+      const imgEl = document.createElement("img");
+      imgEl.src = evt.target.result;
+      imgEl.style.maxWidth = "100%";
+      imgEl.style.display = "block";
+
+      const btnCrop = document.createElement("button");
+      btnCrop.innerText = "✅ Cortar e Usar";
+      btnCrop.style.marginTop = "10px";
+
+      modal.appendChild(imgEl);
+      modal.appendChild(btnCrop);
+      overlay.appendChild(modal);
+      document.body.appendChild(overlay);
+
+      // Inicia Cropper.js com proporção 1:1 (quadrado)
+      const cropper = new Cropper(imgEl, {
+        aspectRatio: 1,
+        viewMode: 1,
+        autoCropArea: 1,
+      });
+
+      btnCrop.onclick = () => {
+        const cropData = cropper.getData(); // x, y, width, height
+        const canvas = document.createElement("canvas");
+
+        // calcula escala para limitar lado maior a 70px
+        let scale = 1;
+        if (cropData.width > cropData.height) scale = 70 / cropData.width;
+        else scale = 70 / cropData.height;
+
+        canvas.width = Math.round(cropData.width * scale);
+        canvas.height = Math.round(cropData.height * scale);
+        const ctx = canvas.getContext("2d");
+
+        const image = cropper.imageData;
+        const tmpImg = new Image();
+        tmpImg.onload = () => {
+          ctx.drawImage(
+            tmpImg,
+            cropData.x, cropData.y, cropData.width, cropData.height,
+            0, 0, canvas.width, canvas.height
+          );
+
+          const base64 = canvas.toDataURL("image/png");
+          const cardImg = card.querySelector("img");
+          cardImg.src = base64;
+          save();
+          overlay.remove();
+		  
+		  // fechar explorar de icones
+		  const iconOverlay = document.querySelector(".cf-modal-overlay");
+		  if (iconOverlay) iconOverlay.remove();
+		  
+        };
+        tmpImg.src = evt.target.result;
+      };
+
+      overlay.addEventListener("click", (ev) => {
+        if (ev.target === overlay) overlay.remove();
+      });
+    };
+    reader.readAsDataURL(file);
+  };
+  input.click();
+};
+
+
+
+
+            modal.appendChild(header);
+            modal.appendChild(nav);
+            //modal.appendChild(btnAppImages);
+            modal.appendChild(btnChooseDevice);
+            modal.appendChild(grid);
+            // ===============================
+
+            // opção especial: usar favicon da URL
+            const usarFavicon = document.createElement("div");
+            usarFavicon.className = "cf-item cf-file";
+            usarFavicon.innerHTML = `🌐<div>Favicon da URL</div>`;
+            usarFavicon.onclick = () => {
+                try {
+                    const a = card.querySelector("a");
+                    const img = card.querySelector("img");
+                    if (a && img) {
+                        const url = new URL(a.href);
+                        img.src = "https://www.google.com/s2/favicons?sz=64&domain_url=" + encodeURIComponent(url);
+                        save();
+                        overlay.remove();
+                    }
+                } catch (e) {
+                    console.error("Não foi possível obter o favicon da URL.");
+                }
+            };
+            grid.appendChild(usarFavicon);
+
+            if (path !== basePath) {
+                const back = document.createElement("button");
+                back.className = "cf-back";
+                back.innerText = "⬅ " + LANG.lang_voltar;
+                back.onclick = () => {
+                    const parent = path.replace(/[^/]+\/?$/, "");
+                    listDirectory(parent);
+                };
+                modal.appendChild(back);
+            }
+
+            const folders = entries.filter(e => e.isDirectory);
+            const pngs = entries.filter(e => e.isFile && /\.png$/i.test(e.name));
+
+            folders.forEach(folder => {
+                const div = document.createElement("div");
+                div.className = "cf-item cf-folder";
+                div.innerHTML = `📁 <span>${folder.name}</span>`;
+                div.onclick = () => listDirectory(path + folder.name + "/");
+                grid.appendChild(div);
+            });
+
+            pngs.forEach(fileEntry => {
+                const div = document.createElement("div");
+                div.className = "cf-item cf-file";
+
+                const imgEl = document.createElement("img");
+                imgEl.src = path + fileEntry.name;
+                imgEl.alt = fileEntry.name;
+
+                const label = document.createElement("div");
+                label.innerText = fileEntry.name;
+
+                div.appendChild(imgEl);
+                div.appendChild(label);
+
+                div.onclick = () => {
+                    const img = card.querySelector("img");
+                    img.src = imgEl.src;
+                    save();
+                    overlay.remove();
+                };
+
+                grid.appendChild(div);
+            });
+
+            const footer = document.createElement("div");
+            footer.className = "cf-modal-footer";
+
+            const btnCancel = document.createElement("button");
+            btnCancel.innerText = LANG.lang_fechar;
+            btnCancel.onclick = () => overlay.remove();
+
+            footer.appendChild(btnCancel);
+            modal.appendChild(footer);
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+
+            applyStyles();
+
+            overlay.addEventListener("click", (ev) => {
+                if (ev.target === overlay) overlay.remove();
+            });
+            overlay.addEventListener("keydown", (ev) => {
+                if (ev.key === "Escape") overlay.remove();
+            });
+            overlay.focus();
+        }
+
+        function onError(err) {
+            console.error("File error:", err);
+            alert("Erro ao acessar arquivos.");
+        }
+
+        // --- CSS com modo dark e novos botões ---
+        function applyStyles() {
+            if (document.getElementById("cf-style")) return;
+            const style = document.createElement("style");
+            style.id = "cf-style";
+            style.textContent = `
+                .cf-modal-overlay {
+                    position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+                    display:flex; align-items:center; justify-content:center;
+                    z-index: 9999;
+                }
+                .cf-modal {
+                    background: #fff;
+                    border-radius: 8px;
+                    max-width: 90vw;
+                    max-height: 85vh;
+                    width: 800px;
+                    display: flex;
+                    flex-direction: column;
+                    overflow: hidden;
+                    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+                }
+                .cf-modal-header { font-weight: 600; margin: 0; padding: 12px; flex-shrink: 0; border-bottom: 1px solid #ddd; }
+                .cf-path { font-size: 12px; color: #555; margin: 0; padding: 0 12px 6px 12px; }
+                .cf-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fill,minmax(90px,1fr));
+                    gap: 8px;
+                    padding: 12px;
+                    overflow: auto;
+                    flex-grow: 1;
+                }
+                .cf-item {
+                    border:1px solid #ddd;
+                    border-radius:6px;
+                    padding:6px;
+                    display:flex;
+                    flex-direction:column;
+                    align-items:center;
+                    justify-content:center;
+                    background:#fafafa;
+                    cursor:pointer;
+                    transition:0.15s;
+                }
+                .cf-item:hover { background:#f0f0f0; transform:scale(1.03); }
+                .cf-item img { width:72px; height:72px; object-fit:contain; margin-bottom:6px; }
+                .cf-item div { font-size:11px; text-align:center; }
+                .cf-folder { font-size:13px; font-weight:500; }
+                .cf-back {
+                    margin-bottom:8px;
+                    background:#eee;
+                    border:none;
+                    padding:6px 10px;
+                    border-radius:6px;
+                    cursor:pointer;
+                }
+                .cf-back:hover { background:#ddd; }
+                .cf-modal-footer {
+                    display:flex;
+                    justify-content:flex-end;
+                    padding: 12px;
+                    border-top: 1px solid #ddd;
+                    flex-shrink: 0;
+                }
+
+                /* NOVOS BOTÕES */
+                .cf-modal > button.cf-back { margin:6px 12px 0 12px; font-size:13px; }
+
+                /* === MODO DARK === */
+                body[data-theme="dark"] .cf-modal { background:#1e1e1e; color:#ddd; box-shadow:0 8px 24px rgba(0,0,0,0.6); }
+                body[data-theme="dark"] .cf-path { color:#aaa; }
+                body[data-theme="dark"] .cf-item { background:#2a2a2a; border:1px solid #444; }
+                body[data-theme="dark"] .cf-item:hover { background:#333; }
+                body[data-theme="dark"] .cf-back { background:#333; color:#ddd; }
+                body[data-theme="dark"] .cf-back:hover { background:#444; }
+                body[data-theme="dark"] .cf-modal-footer button { background:#333; color:#ddd; border:1px solid #555; }
+                body[data-theme="dark"] .cf-modal-footer button:hover { background:#444; }
+            `;
+            document.head.appendChild(style);
+        }
+
+        // --- abre na última pasta usada ---
+        listDirectory(lastDir);
+
+        // aplica favicon automático no primeiro card
+        function aplicarFaviconPrimeiroCard() {
+            const primeiroCard = document.querySelector('.card');
+            if (!primeiroCard) return;
+            const a = primeiroCard.querySelector('a');
+            const img = primeiroCard.querySelector('img');
+            if (!a || !img) return;
+            try {
+                const url = new URL(a.href);
+                const favicon = `${url.origin}/favicon.ico`;
+                img.src = favicon;
+            } catch (e) {
+                console.error('URL inválida no primeiro card');
+            }
+        }
+        document.addEventListener('DOMContentLoaded', aplicarFaviconPrimeiroCard);
+
+    });
+});
+
+
+
+}
+
+  btnDup.addEventListener("click",(e)=>{
+    e.stopPropagation();
+    if(!editMode) return;
+    duplicateElement(card);
+  });
+
+// --- ativa botão share frontal (se existir) ---
+try {
+  const btnShareFront = card.querySelector(".share-btn-front");
+  const btnShare = card.querySelector("[data-action='share']");
+  if (btnShareFront && btnShare) {
+    btnShareFront.addEventListener("click", e => {
+      e.stopImmediatePropagation();
+      e.preventDefault();
+      btnShare.click();
+    });
+  }
+} catch (err) {
+  console.warn("Erro ao ligar botão share frontal:", err);
+}
+
+
+}
+
+function initFolderListeners(folder){
+    if(folder._listenersInited) return;
+    folder._listenersInited = true;
+
+    const header = folder.querySelector(".header");
+    const title = header.querySelector(".title");
+    const btns = header.querySelectorAll(".actions button");
+    const btnRm = btns[0], btnRn = btns[1], btnAdd = btns[2], btnDup = btns[3];
+    const grid = folder.querySelector(".grid");
+
+// --- Indicador de pasta aberta/fechada ---
+let arrow = header.querySelector(".folder-arrow");
+if (!arrow) {
+  arrow = document.createElement("span");
+  arrow.className = "folder-arrow";
+  arrow.textContent = folder.classList.contains("open") ? "➖" : "➕";
+  arrow.style.marginLeft = "8px";
+  header.appendChild(arrow);
+}
+
+// Atualiza o ícone quando abrir/fechar
+const updateArrow = () => {
+  arrow.textContent = folder.classList.contains("open") ? "➖" : "➕";
+  arrow.style.opacity = editMode ? "0" : "1"; // oculta no modo edição
+};
+updateArrow();
+
+
+    // ---------- Identificador persistente baseado no título ----------
+    const uid = "folder_" + title.textContent.trim();
+    folder._uid = uid;
+
+    // ---------- Restaurar estado ----------
+    const openFolders = JSON.parse(localStorage.getItem('openFolders') || '[]');
+    if(openFolders.includes(folder._uid)) folder.classList.add('open');
+
+    // ---------- Acordeão ajustado ----------
+    header.addEventListener("click", (e) => {
+        if(e.target.closest(".actions")) return;
+        folder.classList.toggle("open");
+		updateArrow();
+
+
+        // ---------- Atualizar localStorage ----------
+        let openFolders = JSON.parse(localStorage.getItem('openFolders') || '[]');
+        if(folder.classList.contains("open")){
+            if(!openFolders.includes(folder._uid)) openFolders.push(folder._uid);
+        } else {
+            openFolders = openFolders.filter(id => id !== folder._uid);
+        }
+        if(localStorage.getItem('confPastas')!="false") localStorage.setItem('openFolders', JSON.stringify(openFolders));
+    });
+
+	btnRm.addEventListener("click", (e) => {
+		e.stopPropagation();
+		// Limpar referência do localStorage antes de remover
+		let openFolders = JSON.parse(localStorage.getItem("openFolders") || "[]");
+		openFolders = openFolders.filter(id => id !== folder._uid);
+		localStorage.setItem("openFolders", JSON.stringify(openFolders));
+		removeWithUndo(folder);
+	});
+
+	btnRn.addEventListener("click", (e) => {
+		e.stopPropagation();
+		if (!editMode) return;
+		const oldUid = folder._uid; // guardar o UID antigo
+		const n = prompt(LANG.lang_ren_pasta, title.textContent);
+		if (n != null && n.trim() !== "") {
+			title.textContent = n.trim();
+			folder._uid = "folder_" + n.trim();
+
+			// Atualizar localStorage
+			let openFolders = JSON.parse(localStorage.getItem("openFolders") || "[]");
+			// remover UID antigo
+			openFolders = openFolders.filter(id => id !== oldUid);
+			// adicionar o novo UID se a pasta estiver aberta
+			if (folder.classList.contains("open") && !openFolders.includes(folder._uid)) {
+				openFolders.push(folder._uid);
+			}
+			localStorage.setItem("openFolders", JSON.stringify(openFolders));
+
+			save();
+		}
+	});
+
+    btnAdd.addEventListener("click",(e)=>{ e.stopPropagation(); if(!editMode) return; addCardToGrid(grid,true); });
+    btnDup.addEventListener("click",(e)=>{ e.stopPropagation(); if(!editMode) return; duplicateElement(folder); });
+
+    // Inicialização recursiva de cards e subpastas
+    folder.querySelectorAll(".card").forEach(initCardListeners);
+    folder.querySelectorAll(".folder").forEach(initFolderListeners);
+
+    enableDrop(grid);
+
+	// atualiza visual quando muda o modo edição
+	document.addEventListener("editmodechange", updateArrow);
+
+}
+
+// ---------- Versão recursiva garantida ----------
+function initListenersRecursively(root){
+    if(!root) return;
+    if(root.classList && root.classList.contains("card")) initCardListeners(root);
+    if(root.classList && root.classList.contains("folder")) initFolderListeners(root);
+    root.querySelectorAll && root.querySelectorAll(".card,.folder").forEach(el => {
+        if(el.classList.contains("card")) initCardListeners(el);
+        if(el.classList.contains("folder")) initFolderListeners(el);
+    });
+}
+
+
+
+/* ---------- ADD / DUPLICATE / REMOVE ---------- */
+function addCardToGrid(gridElement, promptForValues=false){
+  if(!editMode) return;
+  let title=LANG.lang_novo_fav, url="https://";
+  if(promptForValues){
+    const t=prompt(LANG.lang_tit_fav); if(!t||!t.trim()) return;
+    const u=prompt(LANG.lang_url_fav,"https://"); if(!u||!u.trim()) return;
+    title=t.trim(); url=u.trim();
+  }
+  const card=createCardElement(title,url);
+  gridElement.appendChild(card);
+  initCardListeners(card);
+  lucide.createIcons();
+  save();
+  showToast(LANG.lang_fav_cria,"success",2000);
+}
+
+function addFolder(){
+  if(!editMode) { showToast(LANG.lang_ativ_modo_edicao,"warning",2000); return; }
+  const folder=createFolderElement(LANG.lang_nova_pasta);
+  foldersContainer.appendChild(folder);
+  initFolderListeners(folder);
+  lucide.createIcons();
+  initSortables();
+  save();
+  showToast(LANG.lang_pasta_criada,"success",2000);
+}
+
+function duplicateElement(el){
+  if(!editMode) return;
+  const clone=el.cloneNode(true);
+  clone.querySelectorAll("[ _listenersInited ]").forEach(x=>x.removeAttribute("_listenersInited"));
+  el.parentNode.insertBefore(clone,el.nextSibling);
+  initListenersRecursively(clone);
+  clone.querySelectorAll(".grid").forEach(g=>enableDrop(g));
+  if(editMode) initSortables();
+  lucide.createIcons();
+  save();
+  showToast(LANG.lang_elem_dupli,"success",2000);
+}
+
+function removeWithUndo(el){
+  if(!editMode) return;
+  const parent=el.parentNode, next=el.nextSibling; el.remove(); save();
+  const toast=document.createElement("div"); toast.className="toast"; toast.textContent=LANG.lang_item_removido;
+  const btn=document.createElement("button"); btn.textContent=LANG.lang_desfazer; btn.onclick=()=>{ if(next) parent.insertBefore(el,next); else parent.appendChild(el); toast.remove(); save(); initListenersRecursively(el); };
+  toast.appendChild(btn); document.body.appendChild(toast); setTimeout(()=>toast.remove(),5000);
+}
+
+/* ---------- DRAG & DROP ---------- */
+function enableDrop(grid){
+
+  if(!grid || grid._dropEnabled) return; grid._dropEnabled=true;
+  grid.addEventListener("dragover",e=>{ e.preventDefault(); grid.classList.add("dragover"); });
+  grid.addEventListener("dragleave",e=>grid.classList.remove("dragover"));
+
+  grid.addEventListener("drop",e=>{
+
+/*
+if (!editMode && grid._dropEnabled) {
+  showToast("Ative o modo de edição para adicionar links!", "warning", 5000);
+  return;
+}
+*/
+
+
+    e.preventDefault(); grid.classList.remove("dragover");
+    if(!editMode) return;
+    const json=e.dataTransfer.getData("application/json");
+    if(json){ try{ const obj=JSON.parse(json); if(obj.title&&obj.url){ const c=createCardElement(obj.title,obj.url); grid.appendChild(c); initCardListeners(c); lucide.createIcons(); save(); return; } }catch(err){} }
+    const html=e.dataTransfer.getData("text/html");
+    if(html){ try{ const doc=new DOMParser().parseFromString(html,"text/html"); const a=doc.querySelector("a"); if(a&&a.href){ const title=(a.textContent||a.getAttribute("title")||a.href).trim(); const url=a.href.trim(); const exists=Array.from(grid.querySelectorAll("a")).some(x=>x.href===url); if(!exists){ const c=createCardElement(title,url); grid.appendChild(c); initCardListeners(c); lucide.createIcons(); save(); } else showToast(LANG.lang_fav_exist, "warning", 3000); return; } }catch(err){} }
+    const url=(e.dataTransfer.getData("text/uri-list")||e.dataTransfer.getData("text/plain")||"").split("\n")[0].trim();
+    if(url&&url.startsWith("http")){ const exists=Array.from(grid.querySelectorAll("a")).some(x=>x.href===url); if(!exists){ const c=createCardElement(url,url); grid.appendChild(c); initCardListeners(c); lucide.createIcons(); save(); } }
+  });
+}
+
+/* ---------- SORTABLE ---------- */
+
+	function initSortables() {
+	  // limpa instâncias antigas
+	  if (window.sortables) {
+		window.sortables.forEach(s => s.destroy());
+	  }
+	  window.sortables = [];
+
+	  // raiz (cards soltos)
+	  window.sortables.push(new Sortable(rootGrid, {
+		group: "links",
+		animation: 150,
+		draggable: ".card",
+		onEnd: save,
+		delay: 200,               // pressionar 200ms antes de arrastar
+		delayOnTouchOnly: true,   // só aplica em touch
+		touchStartThreshold: 3    // tolerância de movimento
+	  }));
+
+	  // grids dentro de pastas
+	  foldersContainer.querySelectorAll(".grid").forEach(g => {
+		window.sortables.push(new Sortable(g, {
+		  group: "links",
+		  animation: 150,
+		  draggable: ".card",
+		  onEnd: save,
+		  delay: 200,
+		  delayOnTouchOnly: true,
+		  touchStartThreshold: 3
+		}));
+	  });
+
+	  // mover pastas inteiras
+	  window.sortables.push(new Sortable(foldersContainer, {
+		group: "folders",
+		animation: 150,
+		handle: ".title", // arrasta só clicando no título da pasta
+		draggable: ".folder",
+		onEnd: save,
+		delay: 200,
+		delayOnTouchOnly: true,
+		touchStartThreshold: 3
+	  }));
+	}
+
+function destroySortables(){ sortables.forEach(s=>{try{s.destroy();}catch(e){}}); sortables=[]; }
+
+function parseDL(dl, parentGrid, parentFolderContainer) {
+  if (!dl) return;
+
+  const dtElements = dl.querySelectorAll(":scope > DT");
+
+  dtElements.forEach(dt => {
+    const a = dt.querySelector(":scope > A");
+    const h3 = dt.querySelector(":scope > H3");
+
+    // LINK NORMAL
+    if (a) {
+      const title = (a.textContent || a.title || a.href).trim();
+      const url = a.href.trim();
+      const card = createCardElement(title, url);
+      parentGrid.appendChild(card);
+      initCardListeners(card);
+    }
+
+    // PASTA
+    if (h3) {
+      const folder = createFolderElement(h3.textContent.trim());
+      parentFolderContainer.appendChild(folder);
+      initFolderListeners(folder);
+
+      // subnível logo após o H3
+      const next = dt.nextElementSibling;
+      if (next && next.tagName === "DL") {
+        parseDL(next, folder.querySelector(".grid"), folder.querySelector(".subfolders"));
+      }
+    }
+  });
+
+  // caso existam DLs dentro de DLs (subpastas diretas)
+  const nestedDLs = dl.querySelectorAll(":scope > DL");
+  nestedDLs.forEach(subDL => {
+    if (!subDL.closest("DT")) {
+      parseDL(subDL, parentGrid, parentFolderContainer);
+    }
+  });
+}
+
+// === IMPORTAÇÃO DE ARQUIVO ===
+/////////////////////////////////////////////
+document.getElementById("importFile").addEventListener("change", ev => {
+  const file = ev.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const doc = new DOMParser().parseFromString(e.target.result, "text/html");
+      const topDL = doc.querySelector("DL");
+      if (!topDL) return showToast(LANG.lang_arq_invalido, "error");
+
+      // --- Ignorar a pasta raiz do Chrome ---
+      
+	  const rootFolder = topDL.querySelector('H3[PERSONAL_TOOLBAR_FOLDER="true"]');
+      let dlParaImportar = topDL;
+      if (rootFolder) {
+        const innerDL = rootFolder.parentElement.querySelector("DL");
+        if (innerDL) dlParaImportar = innerDL;
+      }
+
+      // === IMPORTAR LINKS DIRETOS DA RAIZ ===
+      if (!rootGrid) {
+        console.error(LANG.lang_root_nao_enc);
+        return;
+      }
+
+		/*
+      dlParaImportar.querySelectorAll(":scope > DT > A").forEach(a => {
+        const t = (a.textContent || a.title || a.href).trim();
+        const u = a.href.trim();
+        const c = createCardElement(t, u);
+        rootGrid.appendChild(c);
+        initCardListeners(c);
+      });
+	  */
+
+dlParaImportar.querySelectorAll(":scope > DT > A").forEach(a => {
+    const t = (a.textContent || a.title || a.href).trim();
+    const u = a.href.trim();
+    const c = createCardElement(t, u);
+
+    // 🔹 pega o favicon do atributo ICON (se existir)
+    const icon = a.getAttribute("icon");
+    if (icon) {
+        const img = c.querySelector("img");
+        if (img) img.src = icon;
+    }
+
+    rootGrid.appendChild(c);
+    initCardListeners(c);
+});
+
+
+      // === COLETAR TODAS AS PASTAS ===
+      const pastas = [];
+
+      function coletarPastas(dl) {
+        dl.querySelectorAll(":scope > DT > H3").forEach(h3 => {
+          const nome = h3.textContent.trim();
+          const inner = h3.parentElement.querySelector("DL");
+          if (inner) pastas.push({ nome, inner });
+          if (inner) coletarPastas(inner);
+        });
+      }
+
+      coletarPastas(dlParaImportar);
+
+      // === EXIBIR MODAL DE SELEÇÃO DE PASTAS ===
+      if (pastas.length === 0) {
+        showToast(LANG.lang_import_concluida, "success");
+		aplicarTamanhoImg(false);
+        return;
+      }
+
+      const importModal = document.getElementById("importModal");
+      const list = document.getElementById("foldersList");
+      list.innerHTML = "";
+
+      pastas.forEach(p => {
+        const div = document.createElement("div");
+        div.innerHTML = `<label><input type="checkbox" checked value="${p.nome}"> ${p.nome}</label>`;
+        list.appendChild(div);
+      });
+
+      importModal.style.display = "flex";
+
+      document.getElementById("btnImportarConfirmar").onclick = () => {
+        const selecionadas = [...list.querySelectorAll("input:checked")].map(i => i.value);
+        importModal.style.display = "none";
+        iniciarImportacao(pastas, selecionadas);
+      };
+
+      document.getElementById("btnImportarCancelar").onclick = () => {
+        importModal.style.display = "none";
+      };
+
+    } catch (err) {
+      console.error(err);
+      showToast(LANG.lang_erro_import, "error");
+    }
+  };
+
+  reader.readAsText(file);
+});
+
+// === FUNÇÃO PARA INICIAR IMPORTAÇÃO DAS PASTAS SELECIONADAS ===
+function iniciarImportacao(pastas, selecionadas) {
+
+	if(localStorage.getItem('confFavoritos')=="true") {
+		rootGrid.innerHTML = "";
+		foldersContainer.innerHTML = "";
+		localStorage.setItem(STORAGE_KEY,"");
+		localStorage.setItem("openFolders","");
+
+		document.querySelectorAll(".toast").forEach(t => t.remove());
+	}
+
+  if (!foldersContainer) {
+    console.error(LANG.lang_fold_nao_enc);
+    return;
+  }
+
+  const criadoPaths = new Set();
+
+  // Função utilitária para importar links diretos de um DL
+  function importarLinks(dl, grid) {
+    if (!dl || !grid) return;
+    dl.querySelectorAll(":scope > DT > A").forEach(a => {
+      const t = (a.textContent || a.title || a.href).trim();
+      const u = a.href.trim();
+      const c = createCardElement(t, u);
+
+
+    // 🔹 pega o favicon do atributo ICON (se existir)
+    const icon = a.getAttribute("icon");
+    if (icon) {
+        const img = c.querySelector("img");
+        if (img) img.src = icon;
+    }
+
+
+      grid.appendChild(c);
+      initCardListeners(c);
+    });
+  }
+
+  // Criar cada pasta selecionada + suas subpastas como pastas independentes
+  pastas.forEach(p => {
+    if (!selecionadas.includes(p.nome)) return;
+    if (criadoPaths.has(p.nome)) return; // evita duplicata
+    criadoPaths.add(p.nome);
+
+    const folder = createFolderElement(p.nome);
+    foldersContainer.appendChild(folder);
+    initFolderListeners(folder);
+
+    // importa links imediatos
+    const grid = folder.querySelector(".grid");
+    importarLinks(p.inner, grid);
+  });
+
+
+// --- abre automaticamente a primeira pasta criada ---
+const primeira = foldersContainer.querySelector(".folder");
+if (primeira) {
+  const header = primeira.querySelector(".header");
+  if (header) header.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+}
+
+
+  lucide.createIcons();
+  save();
+  showToast(LANG.lang_import_concluida, "success");
+  aplicarTamanhoImg(false);
+  ocultarLogo();
+}
+
+// === FUNÇÃO DE PARSE RECURSIVO (mantida) ===
+function parseDL(dl, parentGrid, parentFolderContainer) {
+  if (!dl) return;
+  parentGrid = parentGrid || document.createElement("div");
+  parentFolderContainer = parentFolderContainer || document.createElement("div");
+
+  dl.querySelectorAll(":scope > DT").forEach(dt => {
+    const a = dt.querySelector(":scope > A");
+    const h3 = dt.querySelector(":scope > H3");
+
+    // LINK NORMAL
+    if (a) {
+      const title = (a.textContent || a.title || a.href).trim();
+      const url = a.href.trim();
+      const card = createCardElement(title, url);
+      parentGrid.appendChild(card);
+      initCardListeners(card);
+    }
+
+    // PASTA
+    if (h3) {
+      const folder = createFolderElement(h3.textContent.trim());
+      parentFolderContainer.appendChild(folder);
+      initFolderListeners(folder);
+
+      const next = dt.nextElementSibling;
+      if (next && next.tagName === "DL") {
+        parseDL(next, folder.querySelector(".grid"), folder.querySelector(".subfolders"));
+      }
+    }
+  });
+}
+/////////////////////////////////////////////
+
+
+
+
+function exportBookmarks(){
+  const html=`<!DOCTYPE NETSCAPE-Bookmark-file-1>
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">
+<TITLE>Bookmarks</TITLE>
+<H1>Bookmarks</H1>
+<DL><p>
+${exportDL(rootGrid)}
+${exportFolders(foldersContainer)}
+</DL><p>`;
+  const blob=new Blob([html],{type:"text/html"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a"); a.href=url; a.download=dataAtualFormatada(); a.click(); URL.revokeObjectURL(url);
+}
+
+/*
+function exportDL(container){ let out=""; container.querySelectorAll(":scope > .card").forEach(card=>{ const a=card.querySelector("a"); const t=card.querySelector(".title").textContent; out+=`<DT><A HREF="${a.href}">${escapeHtml(t)}</A>\n`; }); return out; }
+*/
+
+function exportDL(container) {
+    let out = "";
+    container.querySelectorAll(":scope > .card").forEach(card => {
+        const a = card.querySelector("a");
+        const t = card.querySelector(".title").textContent;
+        const img = card.querySelector("img"); // favicon
+        const icon = img ? img.src : "";       // pega o src, se existir
+
+        out += `<DT><A HREF="${a.href}" ICON="${icon}">${escapeHtml(t)}</A>\n`;
+    });
+    return out;
+}
+
+
+function exportFolders(container){ let out=""; container.querySelectorAll(":scope > .folder").forEach(folder=>{ const t=folder.querySelector(".title").textContent; out+=`<DT><H3>${escapeHtml(t)}</H3>\n<DL><p>\n`; out+=exportDL(folder.querySelector(".grid")); out+=exportFolders(folder.querySelector(".subfolders")); out+=`</DL><p>\n`; }); return out; }
+
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ---------- LOAD ---------- */
+function load(){
+  const raw=localStorage.getItem(STORAGE_KEY); if(!raw) return;
+  try{
+    const data=JSON.parse(raw);
+    rootGrid.innerHTML=data.root||"";
+    foldersContainer.innerHTML=data.folders||"";
+    document.querySelectorAll(".folder").forEach(f=>f.classList.remove("open"));
+    initListenersRecursively(document);
+    lucide.createIcons();
+  }catch(e){ console.warn("load failed",e); }
+  
+document.querySelectorAll(".folder").forEach(folder => {
+  const arrow = folder.querySelector(".folder-arrow");
+  if (arrow)
+    arrow.textContent = folder.classList.contains("open") ? "➖" : "➕";
+});
+
+ 
+}
+
+/* ---------- SCROLL TOP ---------- */
+const scrollTopBtn=document.getElementById("scrollTopBtn");
+window.addEventListener("scroll",()=>scrollTopBtn.style.display=window.scrollY>200?"block":"none");
+scrollTopBtn.addEventListener("click",()=>window.scrollTo({top:0,behavior:"smooth"}));
+
+/* ---------- INIT ---------- */
+load();
+toggleEditMode(false); // 29102025
+initListenersRecursively(document);
+lucide.createIcons();
+rootGrid.querySelectorAll && enableDrop(rootGrid);
+foldersContainer.querySelectorAll(".grid").forEach(g=>enableDrop(g));
+
+/* ---------- GLOBAL HELPERS ---------- */
+window.addFolder=addFolder;
+window.exportBookmarks=exportBookmarks;
+window.addCard=()=>{ if(!editMode) return; const t=prompt("Título do favorito:"); if(!t||!t.trim()) return; const u=prompt("URL do favorito:","https://"); if(!u||!u.trim()) return; const card=createCardElement(t.trim(),u.trim()); rootGrid.appendChild(card); initCardListeners(card); lucide.createIcons(); save(); };
+</script>
+
+<div id="divLogo" style="position:absolute;left:10px;bottom:10px;right:10px;">
+
+	<footer id="footer">
+
+	  <div class="footer-title">Meus Favoritos</div>
+	  <div class="footer-subtitle">Copyright &copy; 2025 Série Manancial</div>
+
+	  <a class="footer-note" href="mailto:seriemanancial@gmail.com?subject=Suporte Meus Favoritos">seriemanancial@gmail.com</a>
+	  <div class="footer-note"><span id="lang_sup_cont">Suporte e Contato</div>
+	</footer>
+
+</div>
+
+<div id="logoMF" class="logoMF">
+	<img src="meus-favoritos-grey.png" style="width: 240px; height: 240px; filter: grayscale(100%);">
+		<div style="
+		  position: fixed;
+		  top: 68%;
+		  left: 50%;
+		  transform: translateX(-50%);
+		  text-align: center;
+		">
+		  <!-- <button onclick="importarFavoritos();">📦 <span id="lang_import_fav"></span></button> -->
+<button onclick="importarFavoritos('local');">📦 <span id="lang_import_fav"></span></button>
+
+		</div>
+</div>
+
+<style>
+
+.close-btn {
+  float: right;
+  font-size: 22px;
+  cursor: pointer;
+  color: #666;
+  transition: 0.2s;
+}
+.close-btn:hover { color: #000; }
+
+.linha {
+  border-bottom: 1px solid #ddd;
+}
+
+.modal-content ul {
+  padding-left: 18px;
+  font-size: 14px;
+  line-height: 1.4em;
+}
+
+
+/* ===== 🌙 Tema escuro ===== */
+
+body[data-theme="dark"] .modal-content {
+  background: #222;
+  color: #eee;
+  box-shadow: 0 4px 20px rgba(255,255,255,0.1);
+}
+
+body[data-theme="dark"] .close-btn {
+  color: #ccc;
+}
+
+body[data-theme="dark"] .close-btn:hover {
+  color: #fff;
+}
+
+body[data-theme="dark"] .modal-content ul li {
+  color: #ddd;
+}
+
+body[data-theme="dark"] .modal-content p {
+  color: #ddd;
+}
+
+body[data-theme="dark"] .modal-content h1 {
+  color: #ddd;
+}
+
+body[data-theme="dark"] .modal-content h2 {
+  color: #ddd;
+}
+
+body[data-theme="dark"] .modal-content h3 {
+  color: #ddd;
+}
+
+
+/* ===== Animação ===== */
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+
+</style>
+
+<script>
+
+/* ---------- SEGURANÇA ADICIONAL ---------- */
+// Valida URL antes de adicionar à página
+function isSafeUrl(url) {
+  if (!url) return false;
+  url = url.trim().toLowerCase();
+  // permite apenas http, https
+  return url.startsWith("http://") || url.startsWith("https://");
+}
+
+// Sanitiza texto para evitar HTML/JS injetado
+function sanitizeText(text) {
+  const div = document.createElement("div");
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// Sobrescreve a função de criar card para adicionar validação
+const originalCreateCardElement = createCardElement;
+createCardElement = function(title=LANG.lang_novo_fav, url="https://") {
+  title = sanitizeText(title);
+  if (!isSafeUrl(url)) url = "https://";
+  return originalCreateCardElement(title, url);
+};
+
+// Valida drag & drop
+const originalEnableDrop = enableDrop;
+enableDrop = function(grid) {
+  originalEnableDrop(grid);
+  grid.addEventListener("drop", e => {
+    e.preventDefault();
+    if (!editMode) return;
+    let url = (e.dataTransfer.getData("text/uri-list") || e.dataTransfer.getData("text/plain") || "").split("\n")[0].trim();
+    if (url && !isSafeUrl(url)) {
+      console.warn(LANG.lang_url_bloq, url);
+      return;
+    }
+  });
+};
+
+// Valida importação de arquivos
+const originalParseDL = parseDL;
+parseDL = function(dl, parentGrid, parentFolderContainer) {
+  dl.querySelectorAll(":scope > DT").forEach(dt => {
+    const a = dt.querySelector(":scope > A");
+    const h3 = dt.querySelector(":scope > H3");
+    if (a) {
+      const title = sanitizeText((a.textContent || a.getAttribute("title") || a.href).trim());
+      const url = a.href.trim();
+      if (!isSafeUrl(url)) return; // ignora URLs perigosas
+      const c = createCardElement(title, url);
+      parentGrid.appendChild(c);
+      initCardListeners(c);
+    } else if (h3) {
+      const folder = createFolderElement(sanitizeText(h3.textContent.trim()));
+      parentFolderContainer.appendChild(folder);
+      initFolderListeners(folder);
+      const inner = dt.querySelector(":scope > DL");
+      if (inner) parseDL(inner, folder.querySelector(".grid"), folder.querySelector(".subfolders"));
+    }
+  });
+};
+
+/* ---------- FINAL SEGURANÇA ADICIONAL ---------- */
+
+</script>
+
+<script src="https://apis.google.com/js/api.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+
+<script>
+//const CLIENT_ID = "1049671113545-6ela3tfe3kg868rkplc709ipfsjf7jbv.apps.googleusercontent.com";
+const CLIENT_ID = "1049671113545-75iqk66b81d3k4lumd1htfi80clo3aqd.apps.googleusercontent.com";
+
+const SCOPES = "https://www.googleapis.com/auth/drive.file";
+
+let accessToken = null;
+
+// LOGIN Google Drive
+function loginGoogle() {
+
+if(!temInternet()) { return; }
+
+document.addEventListener('deviceready', () => {
+        // Cordova GooglePlus login
+// Após login bem-sucedido:
+		window.plugins.googleplus.login(
+		  { scopes: SCOPES, webClientId: CLIENT_ID, offline: true },
+		  obj => {
+			accessToken = obj.accessToken;
+			localStorage.setItem('google_access_token', accessToken); // salva token
+			loggedIn = true;
+			atualizarBotoes(true);
+			alertaSimples(LANG.lang_login_suces, LANG.lang_goog_drive_conect, "info", 3000);
+		  },
+		  err => alertaSimples(LANG.lang_erro_log_drive, "Erro", "erro", 4000)
+		);
+    });
+
+}
+
+function logoutGoogle() {
+//document.addEventListener('deviceready', () => {
+    //window.plugins.googleplus.disconnect(
+      //() => {
+	confirmarAcao(LANG.lang_desconect_goog_drive, ok => { if (ok) {
+		localStorage.removeItem('google_access_token'); // limpa
+		accessToken = null;
+		loggedIn = false;
+		atualizarBotoes(false);
+		alertaSimples(LANG.lang_logout_goog_drive, LANG.lang_saindo, "info", 3000);
+	}});
+      //},
+      //err => alertaSimples("Verifique se você está logado." +accessToken , "Erro de logout", "erro", 4000)
+    //);
+  //});
+}
+
+// FUNÇÃO BACKUP (mantém histórico + arquivo fixo por ID) — correção onload/confirmarAcao
+async function backupToDrive(content) {
+    if (!accessToken) return loginGoogle();
+    if (!temInternet()) return;
+
+    function showStatus(text, bg = "#444") {
+        let s = document.getElementById("status-msg");
+        if (!s) {
+            s = document.createElement("div");
+            s.id = "status-msg";
+            Object.assign(s.style, {
+                position: "fixed",
+                top: "50%",
+                width: "60%",
+                left: "50%",
+                transform: "translateX(-50%)",
+                background: bg,
+                color: "#ddd",
+                padding: "14px 16px",
+                borderRadius: "10px",
+                boxShadow: "0 4px 18px rgba(0,0,0,0.2)",
+                zIndex: "9999",
+                fontFamily: "sans-serif",
+                fontSize: "14px",
+                textAlign: "center"
+            });
+            document.body.appendChild(s);
+        }
+        s.textContent = text;
+        s.style.display = "block";
+        s.style.background = bg;
+    }
+
+    // restaura a função updateStatus que o código usa
+    function updateStatus(text) {
+        const s = document.getElementById("status-msg");
+        if (s) s.textContent = text;
+    }
+
+    const hideStatus = (ms = 2500) => {
+        setTimeout(() => {
+            const s = document.getElementById("status-msg");
+            if (s) s.style.display = "none";
+        }, ms);
+    };
+
+    // verifica existência do fileId no Drive
+    async function checkFileExistsById(fileId) {
+        try {
+            const res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?fields=id`, {
+                headers: { 'Authorization': 'Bearer ' + accessToken }
+            });
+            return res.ok;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    try {
+        showStatus(LANG.lang_prep_backup);
+
+        const folderId = await ensureFolder(LANG.lang_meus_fav);
+        const fileBlob = new Blob([content], { type: 'text/html' });
+
+        // 🔹 1) Sempre cria backup histórico
+        const histName = `${dataAtualFormatada()}`;
+        const metaHist = { name: histName, mimeType: 'text/html', parents: [folderId] };
+        
+        const formHist = new FormData();
+        formHist.append('metadata', new Blob([JSON.stringify(metaHist)], { type: 'application/json' }));
+        formHist.append('file', fileBlob);
+
+        const xhrHist = new XMLHttpRequest();
+        xhrHist.open('POST', 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', true);
+        xhrHist.setRequestHeader('Authorization', 'Bearer ' + accessToken);
+
+        xhrHist.upload.onprogress = evt => {
+            if (evt.lengthComputable) {
+                const pct = Math.round((evt.loaded / evt.total) * 100);
+                updateStatus(LANG.lang_enviando_backup + ` ${pct}%`);
+                hideStatus(3000);
+            } else updateStatus(LANG.lang_env_backup);
+        };
+
+        xhrHist.onload = () => console.log("Histórico salvo:", xhrHist.responseText);
+        xhrHist.onerror = () => showStatus(LANG.lang_erro_rede, "#b00");
+        xhrHist.send(formHist);
+
+        // 🔹 2) Atualiza ou cria o backup fixo (imutável)
+        const immutableId = localStorage.getItem("immutableBackupId");
+        const immutableName = "Mf-Sincronizacao.html";
+
+        async function criarNovoImutavel() {
+            const meta = { name: immutableName, mimeType: 'text/html', parents: [folderId] };
+            const form = new FormData();
+            form.append('metadata', new Blob([JSON.stringify(meta)], { type: 'application/json' }));
+            form.append('file', fileBlob);
+
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', true);
+            xhr.setRequestHeader('Authorization', 'Bearer ' + accessToken);
+
+            xhr.upload.onprogress = evt => {
+                if (evt.lengthComputable) {
+                    const pct = Math.round((evt.loaded / evt.total) * 100);
+                    updateStatus(LANG.lang_enviando_backup + ` ${pct}%`);
+                    hideStatus(3000);
+                } else updateStatus(LANG.lang_env_backup);
+            };
+
+            xhr.onload = () => {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    const res = JSON.parse(xhr.responseText);
+                    try { localStorage.setItem("immutableBackupId", res.id); } catch (e) {}
+                    const link = `https://drive.google.com/file/d/${res.id}/view`;
+                    confirmarAcao(LANG.lang_backup_suces, ok => { if (ok) { window.open(link, "_blank"); }});
+                    hideStatus();
+                } else {
+                    console.error("Erro Drive (post imutavel):", xhr.responseText);
+                    showStatus(LANG.lang_falha_backup, "#b00");
+                    hideStatus(4000);
+                }
+            };
+
+            xhr.onerror = () => showStatus(LANG.lang_erro_rede, "#b00");
+            xhr.send(form);
+        }
+
+        if (immutableId) {
+            // tenta atualizar o arquivo pelo ID salvo
+            // antes, verifica se ainda existe
+            const exists = await checkFileExistsById(immutableId);
+            if (!exists) {
+                localStorage.removeItem("immutableBackupId");
+                await criarNovoImutavel();
+            } else {
+                const formUpd = new FormData();
+                formUpd.append('metadata', new Blob([JSON.stringify({ name: immutableName })], { type: 'application/json' }));
+                formUpd.append('file', fileBlob);
+
+                const xhrUpd = new XMLHttpRequest();
+                xhrUpd.open('PATCH', `https://www.googleapis.com/upload/drive/v3/files/${immutableId}?uploadType=multipart`, true);
+                xhrUpd.setRequestHeader('Authorization', 'Bearer ' + accessToken);
+
+                xhrUpd.upload.onprogress = evt => {
+                    if (evt.lengthComputable) {
+                        const pct = Math.round((evt.loaded / evt.total) * 100);
+                        updateStatus(LANG.lang_enviando_backup + ` ${pct}%`);
+                        hideStatus(3000);
+                    } else updateStatus(LANG.lang_env_backup);
+                };
+
+                xhrUpd.onload = () => {
+                    if (xhrUpd.status >= 200 && xhrUpd.status < 300) {
+                        const res = JSON.parse(xhrUpd.responseText);
+                        const link = `https://drive.google.com/file/d/${res.id}/view`;
+                        confirmarAcao(LANG.lang_backup_suces, ok => { if (ok) { window.open(link, "_blank"); }});
+                        hideStatus();
+                    } else if (xhrUpd.status === 404) {
+                        // se foi apagado, recria
+                        localStorage.removeItem("immutableBackupId");
+                        criarNovoImutavel();
+                    } else {
+                        console.error("Erro Drive (patch imutavel):", xhrUpd.responseText);
+                        showStatus(LANG.lang_falha_backup, "#b00");
+                        hideStatus(4000);
+                    }
+                };
+
+                xhrUpd.onerror = () => showStatus(LANG.lang_erro_rede, "#b00");
+                xhrUpd.send(formUpd);
+            }
+        } else {
+            // não há ID salvo: cria novo
+            await criarNovoImutavel();
+        }
+
+    } catch (err) {
+        console.error(err);
+        showStatus(LANG.lang_erro_login_backup, "#b00");
+        hideStatus(4000);
+    }
+}
+
+// Função auxiliar para criar ou localizar pasta
+async function ensureFolder(folderName) {
+    const xhrList = await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('GET', `https://www.googleapis.com/drive/v3/files?q=name='${folderName}'+and+mimeType='application/vnd.google-apps.folder'+and+trashed=false&fields=files(id,name)`, true);
+        xhr.setRequestHeader('Authorization', 'Bearer ' + accessToken);
+        xhr.onload = () => xhr.status >= 200 && xhr.status < 300 ? resolve(JSON.parse(xhr.responseText)) : reject(new Error(xhr.responseText));
+        xhr.onerror = () => reject(new Error(LANG.lang_erro_listar_pastas));
+        xhr.send();
+    });
+
+    if (xhrList.files && xhrList.files.length > 0) return xhrList.files[0].id;
+
+    const xhrCreate = await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', 'https://www.googleapis.com/drive/v3/files', true);
+        xhr.setRequestHeader('Authorization', 'Bearer ' + accessToken);
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.onload = () => xhr.status >= 200 && xhr.status < 300 ? resolve(JSON.parse(xhr.responseText)) : reject(new Error(xhr.responseText));
+        xhr.onerror = () => reject(new Error(LANG.lang_erro_criar_pasta));
+        xhr.send(JSON.stringify({ name: folderName, mimeType: 'application/vnd.google-apps.folder' }));
+    });
+
+    return xhrCreate.id;
+}
+
+// Evento deviceready para Cordova
+document.addEventListener('deviceready', () => {
+
+		//alert("Cordova carregado com sucesso!");
+		const loginBtn = document.getElementById('login-btn');
+		const backupBtn = document.getElementById('backup-btn');
+
+		loginBtn.addEventListener('click', loginGoogle);
+		backupBtn.addEventListener('click', () => {
+				
+				//if(!accessToken) { loginGoogle(); return; }
+				if(!accessToken) { alertaSimples(LANG.lang_conecte_conta, LANG.lang_login_necessario, "erro", 5000); return; }
+				
+				const content = gerarBackupHTML();
+				const nomeBackup = dataAtualFormatada();
+			
+			confirmarAcao(LANG.lang_backup_env, ok => { if (ok) {
+				backupToDrive(content);
+			}});
+			
+		});
+
+});
+
+function gerarBackupHTML() {
+  // exportBookmarks() já cria o HTML, então pegamos o blob
+  const htmlContent = `<!DOCTYPE NETSCAPE-Bookmark-file-1>
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">
+<TITLE>Bookmarks</TITLE>
+<H1>Bookmarks</H1>
+<DL><p>
+${exportDL(rootGrid)}
+${exportFolders(foldersContainer)}
+</DL><p>`;
+  return htmlContent;
+}
+
+</script>
+
+<script>
+const arrayTit = "<span id='lang_conf_abertura'></span>,<span id='lang_conf_icon_grd'></span>,<span id='lang_conf_pastas'></span>,<span id='lang_conf_rem_fav'></span>,<span id='lang_conf_rem_dados'></span>,<span id='lang_conf_ocultar'></span>,<span id='lang_conf_pensamentos'></span>,<span id='lang_conf_linkshare'></span>".split(',');
+
+const arrayIde = 'confAbertura,confIcongrd,confPastas,confFavoritos,confDados,confOcultar,confPensamentos,confLinkshare'.split(',');
+
+const arraySta = 'true,false,true,false,false,false,false,true'.split(',');
+
+// --- CRIAR MODAL DINAMICAMENTE ---
+const configModal = document.createElement("div");
+configModal.id = "configModal";
+configModal.className = "modal";
+configModal.style.display = "none";
+configModal.innerHTML = `
+  <div class="modal-content">
+    <span class="close-config">X</span>
+    <h1>⚙ <span id="lang_configuracoes"</span></h1>
+	<h2 id="lang_sync_fav" onclick="importarFavoritos('sync');">🔄 Sincronizar Favoritos</h2>
+    <h3 id="configItems"></h3>
+    <div id="helpFooterContainer"></div>
+  </div>
+`;
+
+// 	<button onclick="importarFavoritos('sync');">🔄 <span id="lang_sync_fav">Sincronizar Favoritos</span></button>
+// <br><div class="linha"></div>
+document.body.appendChild(configModal);
+
+// Seleciona o footer existente na página
+const originalFooter = document.querySelector("#footer");
+
+if (originalFooter) {
+  // Clona o elemento inteiro (true = inclui filhos)
+  const footerClone = originalFooter.cloneNode(true);
+
+  // Insere dentro do helpFooterContainer
+  const helpFooterContainer = document.getElementById("helpFooterContainer");
+  helpFooterContainer.appendChild(footerClone);
+}
+
+const configItemsDiv = configModal.querySelector("#configItems");
+
+// --- GERAR BOTÕES ON/OFF ---
+for (let i = 0; i < arrayIde.length; i++) {
+  const id = arrayIde[i];
+  const labelTxt = '✔️ '+arrayTit[i];
+  const defaultVal = arraySta[i] === 'true';
+  const savedVal = localStorage.getItem(id);
+  const isOn = savedVal !== null ? savedVal === 'true' : defaultVal;
+
+// 🔹 salva status no primeiro carregamento
+  if (savedVal === null && defaultVal === false) {
+    localStorage.setItem(id, "false");
+  } else if (savedVal === null) localStorage.setItem(id, "true");
+
+  const wrapper = document.createElement("div");
+  wrapper.className = "toggle-item";
+  wrapper.innerHTML = `
+    <span class="toggle-label">${labelTxt}</span>
+    <label class="switch">
+      <input type="checkbox" id="${id}" ${isOn ? "checked" : ""}>
+      <span class="slider"></span>
+    </label>
+  `;
+  configItemsDiv.appendChild(wrapper);
+
+  const checkbox = wrapper.querySelector("input");
+  checkbox.addEventListener("change", e => {
+    localStorage.setItem(id, e.target.checked);
+	atualizarElementos();
+  });
+
+  const confIcongrd = document.getElementById('confIcongrd');
+  if (confIcongrd) {
+    confIcongrd.addEventListener('click', () => {
+    aplicarTamanhoImg(true); // chama sua função
+    });
+  }
+
+}
+//configItemsDiv.insertAdjacentHTML("beforeend", "<hr>");
+
+</script>
+
+<script>
+// --- CONFIGURAÇÕES NUMÉRICAS ---
+
+const arrayTitNum = "<span id='lang_item_ajustes_01'></span>,<span id='lang_item_ajustes_02'></span>".split(',');
+
+const arrayIdeNum = 'ajusteUm,ajusteDois'.split(',');
+
+const arrayStaNum = '1,2'.split(',');
+
+const configItemsDiv2 = document.createElement("div");
+configItemsDiv2.id = "configItemsNum";
+configItemsDiv2.innerHTML = `<h1 style="margin-top:20px;">⚙ <span id="lang_ajustes_num"></span></h1>`;
+document.querySelector("#configModal .modal-content").insertBefore(
+  configItemsDiv2,
+  /*document.getElementById("helpFooterContainer")*/""
+);
+
+for (let i = 0; i < arrayIdeNum.length; i++) {
+  const id = arrayIdeNum[i];
+  const labelTxt = arrayTitNum[i];
+  const defaultVal = Number(arrayStaNum[i]);
+  const savedVal = localStorage.getItem(id);
+  const value = savedVal !== null ? Number(savedVal) : defaultVal;
+
+  const wrapper = document.createElement("div");
+  wrapper.className = "num-item";
+  wrapper.innerHTML = `
+    <span class="num-label">${labelTxt}</span>
+    <div class="num-control">
+      <button class="num-btn minus" data-id="${id}">−</button>
+      <input type="number" id="${id}" value="${value}" min="0" step="1" max="3">
+      <button class="num-btn plus" data-id="${id}">+</button>
+    </div>
+  `;
+  //configItemsDiv2.appendChild(wrapper);
+}
+
+
+// --- EVENTOS ---
+configItemsDiv2.addEventListener("click", e => {
+  if (e.target.classList.contains("num-btn")) {
+    const id = e.target.dataset.id;
+    const input = document.getElementById(id);
+    let val = Number(input.value) || 0;
+    if (e.target.classList.contains("plus")) val++;
+    if (e.target.classList.contains("minus")) val = Math.max(0, val - 1);
+    input.value = val;
+    localStorage.setItem(id, val);
+  }
+});
+
+configItemsDiv2.addEventListener("change", e => {
+  if (e.target.type === "number") {
+    localStorage.setItem(e.target.id, e.target.value);
+  }
+});
+
+</script>
+
+<style>
+/* --- CONFIGURAÇÕES NUMÉRICAS --- */
+
+.num-item {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin:8px 0;
+  font-size:16px;
+}
+.num-control {
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+.num-btn {
+  background:#eee;
+  border:none;
+  width:26px;
+  height:26px;
+  border-radius:6px;
+  font-size:18px;
+  cursor:pointer;
+  transition:.2s;
+}
+.num-btn:hover {
+  background:#ddd;
+}
+.num-control input {
+  width:50px;
+  text-align:center;
+  border:1px solid #ccc;
+  border-radius:6px;
+  padding:4px;
+}
+</style>
+
+
+<script>
+
+// --- CONTROLES DO MODAL ---
+const configBtn = document.getElementById("configBtn");
+const closeConfig = configModal.querySelector(".close-config");
+
+configBtn.addEventListener("click", () => configModal.style.display = "block");
+closeConfig.addEventListener("click", () => configModal.style.display = "none");
+window.addEventListener("click", e => { if(e.target === configModal) configModal.style.display = "none"; });
+
+let maliciousUrls = [];
+
+document.addEventListener("click", async e => {
+  const a = e.target.closest(".card a");
+  if (!a) return;
+
+	  const href = a.href;
+	  const isMalicious = maliciousUrls.some(line => href.includes(line));
+	  //const isMalicious = maliciousUrls.length > 0 && maliciousUrls.some(line => href.includes(line));
+
+	  // impede abertura sempre que for malicioso, mesmo no modo edição
+	  if (isMalicious) {
+		e.preventDefault();
+		alertaSimples(LANG.lang_link_malicioso, LANG.lang_aviso_seguranca, "erro", 15000);
+		return;
+	  } // else alert("link ok");
+
+
+  e.preventDefault();
+
+  const online = await temInternet();
+  if (!online) {
+    alertaSimples(LANG.lang_sem_conexao_net, LANG.lang_sem_conexao, "erro", 5000);
+    return;
+  }
+
+  // seu fluxo normal
+  const confirmarAbertura = localStorage.getItem("confAbertura") != "false";
+
+// <b class=fontGrd>Verificação de Abertura!</b><br><br>
+	if (confirmarAbertura) {
+	  const hostname = new URL(href).hostname;
+	  const titulo = a.querySelector(".title")?.textContent || href;
+	  confirmarAcao(
+		`<b class=fontGrd>${titulo}</b><hr>${hostname}<br>${LANG.lang_dom_abertura}`,
+		//<div onclick='document.getElementById("confAbertura").click();this.style.display="none";showToast(LANG.lang_verif_desativada,"success");' style="float:right;font-size:12px;"><br>${LANG.lang_desat_verif}</div>
+		ok => {
+		  if (ok) {
+			if (window.cordova && cordova.InAppBrowser)
+			  cordova.InAppBrowser.open(href, "_system");
+			else
+			  window.open(href, "_blank");
+		  }
+		}
+	  );
+	} else {
+	  if (window.cordova && cordova.InAppBrowser)
+		cordova.InAppBrowser.open(href, "_system");
+	  else
+		window.open(href, "_blank");
+	}
+
+});
+
+async function loadMaliciousUrlsOnline() {
+ if(!temInternet()) { return; }
+  try {
+    const resp = await fetch(caminho+"/urlhaus.abuse.ch.txt", { cache: 'no-store' });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const text = await resp.text();
+    maliciousUrls = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    //showToast(`Lista online carregada (${maliciousUrls.length} entradas).`,"info",5000);
+  } catch (err) {
+    showToast(LANG.lang_falha_load_lista, err);
+    maliciousUrls = []; // fallback seguro
+  }
+}
+
+window.addEventListener("load", loadMaliciousUrlsOnline);
+
+</script>
+
+<style>
+.toggle-item {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin:8px 0;
+  font-size:16px;
+}
+.switch {
+  position:relative;
+  display:inline-block;
+  width:48px;
+  height:26px;
+}
+.switch input {display:none;}
+.slider {
+  position:absolute;
+  cursor:pointer;
+  top:0; left:0; right:0; bottom:0;
+  background-color:#ccc;
+  transition:.3s;
+  border-radius:34px;
+}
+.slider:before {
+  position:absolute;
+  content:"";
+  height:20px;
+  width:20px;
+  left:3px;
+  bottom:3px;
+  background:white;
+  border-radius:50%;
+  transition:.3s;
+}
+input:checked + .slider {
+  background-color:#4caf50;
+}
+input:checked + .slider:before {
+  transform:translateX(22px);
+}
+.close-config { 
+  float:right; cursor:pointer; font-size:20px; 
+}
+
+</style>
+
+<style>
+/* --- TRANSLUCIDEZ DAS JANELAS --- */
+.modal, .window {
+    /* background: rgba(255,255,255,0.1); */ /* leve translucidez */
+	background: rgba(0,0,0,0.5);
+    /* backdrop-filter: blur(2px); */ /* suaviza fundo atrás da janela */
+    /* transition: all 0.2s ease; */
+}
+
+/* Opcional: bordas e sombra para destacar */
+	.modal-content, .window-content {
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+</style>
+
+<!-- BANNER DE COOKIES -->
+<div id="cookieBanner" class="cookie-banner">
+    <p>🍪 <span id="lang_cookies">Este site usa cookies para melhorar sua experiência.</span></p>
+    <button id="acceptCookies" class="cookie-btn"><span id="lang_aceitar">Aceitar</button>
+    <button id="rejectCookies" class="cookie-btn reject"><span id="lang_recusar">Recusar</button>
+</div>
+
+<style>
+/* ESTILO MODERNO E SIMPÁTICO */
+.cookie-banner {
+  position: fixed;
+  bottom: 20px;
+  left: 20%;
+  transform: translateX(-10%);
+  background: rgba(50,50,50,0.95);
+  color: #fff;
+  padding: 14px 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+  _display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+  z-index: 9999;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.4s ease;
+}
+.cookie-banner.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.cookie-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cookie-btn {
+  background: #4caf50;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: 0.2s;
+}
+.cookie-btn:hover {
+  background: #45a049;
+}
+.cookie-btn.reject {
+  background: #f44336;
+}
+.cookie-btn.reject:hover {
+  background: #e53935;
+}
+</style>
+
+<script>
+// --- BANNER DE COOKIES ---
+/*
+document.addEventListener("DOMContentLoaded", () => {
+    const banner = document.getElementById("cookieBanner");
+    const accepted = localStorage.getItem("cookiesAccepted");
+    if (!accepted) {
+        banner.classList.add("show");
+    }
+
+    const acceptBtn = document.getElementById("acceptCookies");
+    const rejectBtn = document.getElementById("rejectCookies");
+
+    acceptBtn.addEventListener("click", () => {
+        localStorage.setItem("cookiesAccepted", "true");
+        banner.classList.remove("show");
+    });
+
+    rejectBtn.addEventListener("click", () => {
+        //localStorage.setItem("confAbertura", "false");
+        banner.classList.remove("show");
+        alertaSimples("Você não poderá usar o modo de edição sem aceitar os cookies. 😉","info",6000);
+        editMode = false; // desativa o modo de edição
+    });
+});
+*/
+
+// --- IMPEDIR ATIVAÇÃO DO MODO DE EDIÇÃO SE NÃO ACEITOU COOKIES ---
+function checkEditMode() {
+    const accepted = localStorage.getItem("cookiesAccepted") === "true";
+    if(!accepted){
+        alertaSimples(LANG.lang_aceitar_cookies,"info",6000);
+        return false;
+    }
+    return true;
+}
+
+// Exemplo: ativar modo de edição apenas se permitido
+/*
+document.getElementById("editBtn")?.addEventListener("click", ()=>{
+    if(checkEditMode()){
+        editMode = true;
+        // sua lógica de ativação de edição
+    } else {
+        editMode = false;
+    }
+});
+*/
+</script>
+
+<style>
+/* BOTÃO SIMPÁTICO */
+.emoji-btn {
+  background: #4caf50;
+  color: #fff;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+.emoji-btn:hover { background: #45a049; }
+
+/* MODAL MODERNO */
+.modal-priv {
+  position: fixed;
+  top:0; left:0; width:100%; height:100%;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  justify-content:center;
+  align-items:center;
+  z-index: 9999;
+}
+
+/* ===== Modal base ===== */
+
+.modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal-content {
+  background: rgba(255,255,255,0.95);
+  padding: 20px;
+  box-sizing: border-box;
+  border-radius: 12px;
+  max-width: 360px;
+  width: 360px;
+  max-height: 60%;
+  overflow-y: auto;
+  overflow-w: hidden;
+  position: fixed;
+  top: 50%;  /* move para o meio da tela verticalmente */
+  left: 0;
+  right: 0;
+  margin: 0 auto;  /* centraliza horizontalmente */
+  transform: translateY(-50%); /* ajusta para centralização exata */
+}
+
+.switch {
+  width: 50px;         /* largura fixa */
+  height: 25px;
+  flex-shrink: 0;      /* impede encolhimento em flex containers */
+  flex-grow: 0;        /* impede expansão */
+  box-sizing: border-box;
+}
+
+</style>
+
+<!-- 🌐 MODAL SINCRONIZAÇÃO -->
+<div id="syncModal" class="sync-modal" style="display:none;">
+  <div class="sync-box">
+    <h3>🔄 <span id="lang_sync_title">Sincronizar dados</span></h3>
+    <p id="lang_sync_msg">
+      Todos os favoritos atuais serão apagados e substituídos pela sincronização.
+    </p>
+
+    <label for="syncIdInput" id="lang_sync_label">Id do arquivo de sincronização no Google Drive:</label>
+    <div class="sync-input-wrap">
+      <input id="lang_sync_id_input" type="text" placeholder="Insira ou confirme o código" />
+      <button id="copySyncIdBtn" title="Copiar código">📋</button>
+    </div>
+
+    <div class="sync-actions">
+      <button id="lang_sync_confirmar" class="ok-btn">✅ Confirmar</button>
+      <button id="lang_sync_cancelar" class="cancel-btn">❌ Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<style>
+/* ====== LAYOUT MODAL SINCRONIZAÇÃO ====== */
+.sync-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  transition: opacity 0.2s ease;
+}
+
+.sync-box {
+  background: #fff;
+  color: #222;
+  border-radius: 12px;
+  padding: 18px 20px;
+  width: 340px;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.25);
+  font-family: "Segoe UI", sans-serif;
+  animation: zoomIn 0.2s ease;
+}
+
+@keyframes zoomIn {
+  from { transform: scale(0.9); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.sync-box h3 {
+  margin: 0 0 10px 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.sync-box p {
+  font-size: 13px;
+  color: #555;
+  margin-bottom: 14px;
+  line-height: 1.4;
+}
+
+.sync-input-wrap {
+  display: flex;
+  gap: 6px;
+  margin-top: 5px;
+}
+
+.sync-input-wrap input {
+  flex: 1;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #bbb;
+  outline: none;
+  font-size: 14px;
+}
+
+.sync-input-wrap button {
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  background: #f0f0f0;
+  transition: 0.2s;
+}
+.sync-input-wrap button:hover {
+  background: #ddd;
+}
+
+.sync-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.sync-actions .ok-btn {
+  background: #2e8b57;
+  color: #fff;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+.sync-actions .ok-btn:hover { background: #256d45; }
+
+.sync-actions .cancel-btn {
+  background: #b22222;
+  color: #fff;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+.sync-actions .cancel-btn:hover { background: #8b1a1a; }
+
+/* ====== 🌙 MODO ESCURO ====== */
+body[data-theme="dark"] .sync-box {
+  background: #222;
+  color: #eee;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.7);
+}
+body[data-theme="dark"] .sync-box p {
+  color: #bbb;
+}
+body[data-theme="dark"] .sync-input-wrap input {
+  background: #333;
+  color: #eee;
+  border-color: #555;
+}
+body[data-theme="dark"] .sync-input-wrap button {
+  background: #333;
+  color: #eee;
+}
+body[data-theme="dark"] .sync-input-wrap button:hover {
+  background: #444;
+}
+body[data-theme="dark"] .ok-btn {
+  background: #1c7a46;
+}
+body[data-theme="dark"] .ok-btn:hover {
+  background: #17693b;
+}
+body[data-theme="dark"] .cancel-btn {
+  background: #992020;
+}
+body[data-theme="dark"] .cancel-btn:hover {
+  background: #7a1818;
+}
+</style>
+
+<script>
+
+/////////-------------------
+// IMPORTAR / SINCRONIZAR FAVORITOS
+
+document.getElementById("copySyncIdBtn").addEventListener("click", () => {
+  const input = document.getElementById("lang_sync_id_input");
+  if (!input || !input.value.trim()) {
+    showToast(LANG.lang_sync_no_codigo, "warning");
+    return;
+  }
+  navigator.clipboard.writeText(input.value.trim())
+    .then(() => alertaSimples(LANG.lang_sync_cod_copiado,"",6000))
+    .catch(() => showToast(LANG.lang_sync_falha_copiar, "error"));
+});
+
+async function importarFavoritos(origem = "local") {
+  try {
+
+    confirmarAcao(
+      origem === "sync" ? LANG.lang_sincronizar_fav : LANG.lang_importar_favoritos,
+      async (confirmado) => {
+        if (!confirmado) {
+          showToast(LANG.lang_import_cancelada, "warning");
+          return;
+        }
+
+        try {
+          let html = "";
+
+          // 🔹 Modo Sincronização (Google Drive)
+          if (origem === "sync") {
+            if (!temInternet()) return;
+            if (!accessToken) return loginGoogle();
+
+            // Exibe modal com código de sincronização
+            const modal = document.getElementById("syncModal");
+            const input = document.getElementById("lang_sync_id_input");
+            input.value = localStorage.getItem("immutableBackupId") || "";
+            modal.style.display = "flex";
+
+            const syncId = await new Promise((resolve) => {
+              document.getElementById("lang_sync_confirmar").onclick = () => {
+                modal.style.display = "none";
+                const val = input.value.trim();
+                if (!val) {
+                  showToast("Campo obrigatório.", "warning");
+                  resolve(null);
+                } else resolve(val);
+              };
+              document.getElementById("lang_sync_cancelar").onclick = () => {
+                modal.style.display = "none";
+                showToast(LANG.lang_import_cancelada, "warning");
+                resolve(null);
+              };
+            });
+
+            if (!syncId) return;
+
+		    // fecha a janela de configuracoes
+		    alertaSimples("Carregando....","","sucesso",1111);
+            const configModal = document.getElementById("configModal");
+		    if (configModal) configModal.style.display = "none";
+
+            // Faz o download do arquivo do Google Drive
+            const res = await fetch(`https://www.googleapis.com/drive/v3/files/${syncId}?alt=media`, {
+              headers: { Authorization: "Bearer " + accessToken },
+            });
+            if (!res.ok) throw new Error(LANG.lang_erro_carregar + " Google Drive");
+            html = await res.text();
+
+            // 🔸 Se o ID ainda não estiver salvo, grava após a sincronização
+            if (!localStorage.getItem("immutableBackupId")) {
+              localStorage.setItem("immutableBackupId", syncId);
+            }
+
+          }
+
+          // 🔹 Modo Importação local
+          else {
+            const favImport = caminho + "/meus-favoritos.html";
+            const res = await fetch(favImport);
+            if (!res.ok) throw new Error(LANG.lang_erro_carregar + favImport);
+            html = await res.text();
+          }
+
+          // 🔹 Parse do HTML
+          const doc = new DOMParser().parseFromString(html, "text/html");
+          const topDL = doc.querySelector("DL");
+          if (!topDL) {
+            console.warn(LANG.lang_dl_nao_encontrado);
+            return;
+          }
+
+          // 🔹 Coleta das pastas
+          const pastas = [];
+          topDL.querySelectorAll("DT > H3").forEach(h3 => {
+            const nome = h3.textContent.trim();
+            const inner = h3.parentElement.querySelector("DL");
+            if (inner) pastas.push({ nome, inner });
+          });
+
+          // 🔹 Importação direta se não houver múltiplas pastas
+          if (pastas.length === 0) {
+            iniciarImportacao([{ nome: "Favoritos", inner: topDL }], ["Favoritos"]);
+            return;
+          }
+
+          // 🔹 Exibe o modal de seleção de pastas (mesmo da importação)
+          const modal = document.getElementById("importModal");
+          const list = document.getElementById("foldersList");
+          list.innerHTML = "";
+		  
+
+          pastas.forEach(p => {
+            const div = document.createElement("div");
+            div.innerHTML = `<label><input type="checkbox" checked value="${p.nome}"> ${p.nome}</label>`;
+            list.appendChild(div);
+          });
+
+          modal.style.display = "flex";
+
+          document.getElementById("btnImportarConfirmar").onclick = () => {
+            const selecionadas = [...list.querySelectorAll("input:checked")].map(i => i.value);
+            modal.style.display = "none";
+
+			// apaga favoritos anteriores
+			resetarFavoritos(false);
+
+            iniciarImportacao(pastas, selecionadas);
+          };
+
+          document.getElementById("btnImportarCancelar").onclick = () => {
+            modal.style.display = "none";
+            showToast(LANG.lang_import_cancelada, "warning");
+          };
+
+        } catch (err) {
+          showToast(LANG.lang_erro_importar + err.message, "error");
+        }
+      }
+    );
+  } catch (err) {
+    showToast(LANG.lang_erro_iniciar_import + err.message, "error");
+  }
+}/////////-------------------
+
+// versao 1.2 de 17.10.2025
+function restaurarDados() {
+  try {
+    // --- Verifica se já existe localstorage ---
+    /*
+	const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      showToast("Favoritos já existem. Importação automática ignorada.","success");
+      return;
+    }
+	*/
+
+    // --- Confirmação de segurança usando confirmarAcao ---
+    confirmarAcao(
+      LANG.lang_restauracao_de_dados,
+      (confirmado) => {
+        if (!confirmado) {
+          showToast(LANG.lang_restauracao_cancelada,"warning");
+		  //importacaoPadrao();
+          return;
+        }
+
+        // --- Abre seletor de arquivos para restauração manual ---
+        const inputFile = document.getElementById("importFile");
+        if (!inputFile) {
+          console.warn("Elemento #importFile não encontrado.");
+          return;
+        }
+
+        showToast(LANG.lang_selecione_arquivo,"success");
+
+
+        inputFile.click(); // só funciona via clique do usuário
+
+      }
+    );
+  } catch (err) {
+    showToast(LANG.lang_erro_ini_restauracao + err.message,"error");
+  }
+}
+
+// fim da importacao
+
+
+// --- CACHE LOCAL DO ARQUIVO DE URLs MALiciosas ---
+//let maliciousUrls = [];
+
+//document.addEventListener('deviceready', () => loadMaliciousUrlsOnline());
+
+//window.addEventListener('load', () => { if (!window.cordova) loadMaliciousUrlsOnline(); });
+
+
+// impedir menu de contexto no link
+document.addEventListener("contextmenu", e => {
+  const a = e.target.closest(".card a");
+  if (a) e.preventDefault(); // evita que o menu do link apareça
+});
+
+function atualizarBotoes(estadoLogin) {
+  //document.getElementById('backup-btn').style.display = estadoLogin ? 'inline-block' : 'none';
+  document.getElementById('logout-btn').style.display = estadoLogin ? 'inline-block' : 'none';
+  document.getElementById('login-btn').style.display = estadoLogin ? 'none' : 'inline-block';
+}
+
+document.addEventListener('deviceready', () => {
+  const savedToken = localStorage.getItem('google_access_token');
+  if (savedToken) {
+    accessToken = savedToken;
+    loggedIn = true;
+    atualizarBotoes(true);
+  }
+});
+
+
+window.addEventListener("load", () => {
+
+  atualizarSetas(!editMode);
+  const savedToken = localStorage.getItem('google_access_token');
+  if (!savedToken) {
+    localStorage.removeItem('google_access_token'); // limpa
+	accessToken = null;
+	loggedIn = false;
+	atualizarBotoes(false);
+  }
+});
+
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const btn = document.getElementById("toggleTheme");
+  const savedTheme = localStorage.getItem("theme") || "light";
+
+  // aplica tema salvo
+  document.body.dataset.theme = savedTheme;
+  btn.textContent = savedTheme === "dark" ? "☀️" : "🌙";
+
+  // alternar tema ao clicar
+  btn.addEventListener("click", () => {
+    const current = document.body.dataset.theme === "dark" ? "light" : "dark";
+    document.body.dataset.theme = current;
+    localStorage.setItem("theme", current);
+    btn.textContent = current === "dark" ? "☀️" : "🌙";
+  });
+});
+</script>
+
+<script>
+
+function showBarras() {
+	StatusBar.show();
+	StatusBar.overlaysWebView(true);
+	StatusBar.backgroundColorByHexString("#44000000");
+	window.NavigationBar.backgroundColorByHexString("#44000000", true);
+	window.AndroidFullScreen.showSystemUI();
+	window.AndroidFullScreen.showUnderStatusBar();
+}
+
+let acaoShow = true;
+const botShowBar = document.getElementById("showToolBar");
+botShowBar.addEventListener("click", () => {
+	if(acaoShow) {
+		document.addEventListener("deviceready", function () {
+			showBarras();
+			showToast(LANG.lang_exibe_barra_status,"standard");
+			acaoShow = false;
+			setTimeout(function() {
+				acaoShow = true;
+				window.AndroidFullScreen.immersiveMode();
+			}, 3333);
+		}, false);
+	}
+});
+ocultarLogo();
+</script>
+
+<script>
+// Função para atualizar cor do botão de acordo com o tema
+function atualizarShareBtnTema(card) {
+  const btn = card.querySelector(".share-btn-front");
+  if (!btn) return;
+  const tema = document.body.getAttribute("data-theme");
+  btn.style.color = tema === "dark" ? "#666" : "#ddd";
+  //showToast(tema);
+}
+
+// Observa mudança de tema
+const observer = new MutationObserver(() => {
+  document.querySelectorAll(".card").forEach(atualizarShareBtnTema);
+});
+observer.observe(document.body, { attributes: true, attributeFilter: ["data-theme"] });
+</script>
+
+<style>
+.modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(6px);
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  animation: fadeIn 0.25s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.modal-content {
+  background: #fff;
+  color: #333;
+  width: 90%;
+  max-width: 380px;
+  border-radius: 16px;
+  box-shadow: 0 8px 26px rgba(0,0,0,0.25);
+  padding: 24px;
+  text-align: left;
+  animation: fadeIn 0.3s ease;
+}
+
+/*
+.modal-content h1 {
+  font-size: 1.3em;
+  margin-bottom: 18px;
+}*/
+
+.modal-body {
+  margin-bottom: 20px;
+}
+
+.modal-body label {
+  font-weight: 500;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.modal-body select {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-size: 0.95em;
+  transition: border-color 0.2s;
+}
+
+.modal-body select:focus {
+  border-color: #0078ff;
+  outline: none;
+}
+
+button#close-modal {
+  background: linear-gradient(135deg, #0078ff, #00b4d8);
+  color: #fff;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.25s ease;
+}
+
+button#close-modal:hover {
+  background: linear-gradient(135deg, #0066cc, #0098c7);
+  transform: translateY(-1px);
+}
+
+body[data-theme="dark"] .modal-content {
+  background: #222;
+  color: #eee;
+  box-shadow: 0 6px 22px rgba(0,0,0,0.5);
+}
+
+body[data-theme="dark"] select {
+  background: #333;
+  color: #fff;
+  border-color: #444;
+}
+
+body[data-theme="dark"] button#close-modal {
+  background: linear-gradient(135deg, #3a8ef6, #00c2ff);
+  color: #fff;
+}
+
+body[data-theme="dark"] button#close-modal:hover {
+  background: linear-gradient(135deg, #2a7ae4, #00aee0);
+}
+</style>
+
+<!-- Modal -->
+<div id="settings-modal" class="modal">
+  <div class="modal-content">
+    <h1 id="lang_idiomas">🌐 Idiomas</h1>
+    <div class="modal-body">
+      <label for="lang-select"><span id="lang_sel_idioma">Selecione um idioma:</span></label>
+      <select id="lang-select" style="width:100%;">
+        <option value="auto"><span id="lang_automatico">Automático</span></option>
+      </select>
+    </div>
+    <p><button id="close-modal"><span id="lang_fechar">Fechar</span></button></p>
+  </div>
+</div>
+
+<script src="js/main.js"></script>
+
+<style>
+/* Overlay */
+.dynamic-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999;
+  animation: fadeIn .2s ease;
+}
+
+/* Container */
+.dynamic-modal {
+  width: min(90%, 520px);
+  max-height: 85vh;
+  background: var(--modal-bg, #fff);
+  color: var(--modal-fg, #222);
+  border-radius: 14px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 25px rgba(0,0,0,.3);
+  animation: slideIn .2s ease;
+}
+
+/* Header */
+.dynamic-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  font-weight: bold;
+  border-bottom: 1px solid #ddd;
+}
+
+.dynamic-modal-header button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.dynamic-modal-header button:hover {
+  opacity: 0.7;
+}
+
+/* Conteúdo */
+.dynamic-modal-content {
+  padding: 16px;
+  overflow-y: auto;
+}
+
+/* Animações */
+@keyframes fadeIn {
+  from { opacity: 0 }
+  to   { opacity: 1 }
+}
+
+@keyframes slideIn {
+  from { transform: translateY(10px); opacity: 0 }
+  to   { transform: translateY(0); opacity: 1 }
+}
+
+/* 🔥 Dark mode automático */
+body[data-theme="dark"] .dynamic-modal {
+  --modal-bg: #1f1f1f;
+  --modal-fg: #f5f5f5;
+}
+
+body[data-theme="dark"] .dynamic-modal-header {
+  border-bottom-color: #444;
+}
+
+</style>
+
+<div id="privacyText" class="privacy-content"></div>
+
+<script>
+
+async function openDynamicModal(filePath, modalTitle = "Informação") {
+  // Evita abrir duas janelas
+  if (document.querySelector(".dynamic-modal-overlay")) return;
+
+  const overlay = document.createElement("div");
+  overlay.className = "dynamic-modal-overlay";
+
+  const modal = document.createElement("div");
+  modal.className = "dynamic-modal";
+
+  modal.innerHTML = `
+    <div class="dynamic-modal-header">
+      <span>${modalTitle}</span>
+      <button class="btn-close-modal"><i data-lucide="x"></i></button>
+    </div>
+    <div class="dynamic-modal-content">
+      <p>Carregando...</p>
+    </div>
+  `;
+
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+
+  lucide.createIcons();
+
+  const content = modal.querySelector(".dynamic-modal-content");
+  const close = () => overlay.remove();
+
+  modal.querySelector(".btn-close-modal").addEventListener("click", close);
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) close();
+  });
+
+  // 🔥 Tenta carregar conteúdo
+  try {
+    const resp = await fetch(filePath);
+    if (!resp.ok) throw new Error("HTTP " + resp.status);
+    const html = await resp.text();
+    content.innerHTML = html;
+
+    const originalFooter = document.querySelector("#footer");
+    if (originalFooter) {
+		content.innerHTML += originalFooter.outerHTML;
+	}
+
+  } catch (err) {
+    console.error(err);
+    content.innerHTML = `
+      <p style="color:red;">${LANG.lang_erro_carregar}</p>
+    `;
+  }
+//      <small>${filePath}</small>
+
+  // Se você quiser: ativar sortable aqui depois
+  // new Sortable(content, { animation: 150 });
+}
+
+function openFileModal(file, tituloHtml) {
+  // Abre a modal com conteúdo do arquivo
+  openDynamicModal(file, tituloHtml);
+
+  // Insere o footer clonando o existente
+  const modalContent = document.querySelector(".dynamic-modal .modal-content");
+  if (modalContent) {
+    const originalFooter = document.querySelector("#footer");
+    // Garante que não duplique
+    if (originalFooter && !modalContent.querySelector("#footer")) {
+      const footerClone = originalFooter.cloneNode(true);
+      modalContent.appendChild(footerClone);
+    }
+  }
+}
+
+document.getElementById("privacyBtn").onclick = () => {
+	openDynamicModal(caminho+"/privacidade.html", '<h1>⭐ '+LANG.lang_pol_priv+'</h1>');
+};
+
+document.getElementById("helpBtn").onclick = () => {
+	const saved = localStorage.getItem("lang");
+	const lang = (!saved || saved === "auto") ? "pt" : saved;
+	const helpFile = `${caminho}/langs/ajuda-${lang}.html`;
+
+	openDynamicModal(helpFile, '<h1>⭐ '+LANG.lang_meus_fav+'</h1>');
+};
+
+</script>
+
+<style>
+
+.reflexoes-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.reflexoes-content {
+  background: var(--fundo, #fff);
+  color: var(--texto, #222);
+  border-radius: 16px;
+  padding: 10px;
+  width: 80%;
+  max-width: 380px;
+  box-shadow: 0 0 20px rgba(0,0,0,0.3);
+  display: flex;
+  flex-direction: row;
+  gap: 15px;
+  max-height: 500px; /* altura máxima do modal */
+  left: 20px;
+  right: 20px;
+}
+
+@media (min-width: 600px) {
+.reflexoes-content {
+  width: 80%;
+  max-width: 480px;
+  max-height: 500px; /* altura máxima do modal */
+  }
+
+div.menu-item p {
+  font-size: 12px;
+}
+
+div.menu-items-container {
+  max-height: 500px;
+}
+
+div.reflexao-exibida img {
+  max-height: 350px;
+}
+
+div.reflexao-exibida h2 {
+  font-size: 24px;
+}
+
+div.reflexao-exibida p {
+  font-size: 20px;
+}
+
+}
+
+.reflexao-exibida {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.reflexao-exibida img {
+  width: 100%;
+  max-height: 250px;
+  object-fit: cover;
+  border-radius: 12px;
+  margin-bottom: 10px;
+}
+
+.reflexao-exibida p {
+  margin-bottom: 10px;
+  font-size: 15px;
+}
+
+.botoes-share {
+  margin-top: 8px;
+}
+
+.botoes-share button {
+  margin: 4px;
+  padding: 6px 6px;
+  border: none;
+  border-radius: 8px;
+  background: #0077ff;
+  color: white;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.botoes-share button:hover {
+  opacity: 0.8;
+}
+
+/* Menu lateral */
+.galeria.menu-lateral {
+  width: 33%;
+  display: flex;
+  flex-direction: column;
+}
+
+.menu-items-container {
+  display: block;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto; /* rolável verticalmente */
+  max-height: 400px;
+  overflow-x: hidden;
+}
+
+/* Item do menu lateral */
+.menu-item {
+  margin-bottom: 6px;
+  position: relative;
+  height: 70px;
+  cursor: pointer;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.menu-item-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.25;
+  z-index: 0;
+}
+
+.menu-item p {
+  position: relative;
+  z-index: 1;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--texto, #000);
+  margin: 0;
+  padding: 10px;
+  /*text-shadow: 1px 1px 2px rgba(0,0,0,0.5);*/
+  _display: flex;
+  align-items: center;
+  height: 100%;
+}
+
+.menu-item:hover {
+  transform: scale(1.03);
+}
+
+.menu-item.selecionada {
+  border: 2px solid #0077ff;
+}
+
+/* Reflexão principal */
+.reflexao-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.reflexao-container img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 12px;
+  opacity: 0.25;
+  z-index: 0;
+  top: 50%;  /* move para o meio da tela verticalmente */
+  left: 0;
+  right: 0;
+  margin: 0 auto;  /* centraliza horizontalmente */
+  transform: translateY(-50%); /* ajusta para centralização exata */
+}
+
+.reflexao-container p {
+  position: relative;
+  z-index: 1;
+  font-size: 17px;
+  font-weight: 500;
+  padding: 15px;
+  color: var(--texto, #000);
+  font-family: Verdana;
+}
+
+h2 {
+  font-family: Dreams;
+  font-size: 18px;
+}
+
+h3 {
+  font-family: Dreams;
+  font-size: 16px;
+}
+
+/* --- MODO DARK --- */
+/*
+body[data-theme="dark"] .reflexoes-content,
+body[data-theme="dark"] .menu-item,
+body[data-theme="dark"] .reflexao-container p,
+body[data-theme="dark"] .botoes-share button {
+  background-color: #444;
+  color: #eee;
+  border-color: #444;
+}
+
+body[data-theme="dark"] .menu-item p {
+  color: #eee;
+}
+*/
+
+body[data-theme="dark"] .reflexoes-content {
+  background-color: #ccc;
+  border-color: #eee;
+}
+
+</style>
+
+<script src="js/pensamentos.js"></script>
+
+<script>
+
+function embaralharArray(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+}
+
+//embaralharArray(fonte);
+
+const imagensPath = 'fundos/';
+const totalImagens = 10;
+//const linkPlayStore = 'https://play.google.com/store/apps/details?id=sm.meus.favoritos';
+const linkPlayStore = "seriemanancial.com/loja";
+const titulo = '🤔 Mil Pensamentos';
+const imgFundo = 1;
+
+function abrirReflexoes() {
+  const modal = document.createElement('div');
+  modal.className = 'reflexoes-modal';
+  modal.innerHTML = `
+    <div class="reflexoes-content">
+      <div class="galeria menu-lateral">
+        <div class="menu-items-container"></div>
+      </div>
+      <div class="reflexao-exibida">
+	    <div style="text-align:center;width:100%;"><span style="float:right;margin-right:5px;" id="closeJan">X</span>
+        <h2>${titulo}</h2></div>
+        <div class="reflexao-container">
+          <img class="img-reflexao" src="" alt="miniatura">
+          <p class="texto-reflexao"></p>
+        </div>
+        <div class="botoes-share">
+          <button class="share-wa">💬 Zap</button>
+          <button class="share-fb">📘 Face</button>
+          <button id="xBotao" class="share-tw">🐦 X</button>
+          <!-- <button class="share-tg">✈️ Telegram</button> -->
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  const imgReflexao = modal.querySelector('.img-reflexao');
+  const textoReflexao = modal.querySelector('.texto-reflexao');
+  const btnFB = modal.querySelector('.share-fb');
+  const btnWA = modal.querySelector('.share-wa');
+  const btnTW = modal.querySelector('.share-tw');
+  const btnTG = modal.querySelector('.share-tg');
+  const container = modal.querySelector('.menu-items-container');
+
+  var inicio = Math.floor(Math.random() * (fonte.length - 50));
+
+  // Cria itens do menu lateral
+  for (let i = inicio; i < inicio+50; i++) {
+    const item = document.createElement('div');
+    item.className = 'menu-item';
+	const imgFundo = fRandom(1,21);
+
+    const img = document.createElement('img');
+    img.src = `${imagensPath}fundo-${zero((imgFundo),2)}.jpg`;
+    img.alt = ``; //`Reflexão ${i + 1}`;
+    img.className = 'menu-item-bg';
+
+	const textoCompleto = fonte[i];
+	const textoCurto = textoCompleto.length > 50
+	? textoCompleto.slice(0, 50) + '...' 
+	: textoCompleto;
+
+    const p = document.createElement('p');
+    p.textContent = i +'- '+ textoCurto;
+
+    item.appendChild(img);
+    item.appendChild(p);
+
+    item.onclick = () => selecionarReflexao(i, item, imgFundo);
+
+    container.appendChild(item);
+  }
+
+  function selecionarReflexao(indice, itemSelecionado, imgFundo) {
+    container.querySelectorAll('.menu-item').forEach(it => it.classList.remove('selecionada'));
+    itemSelecionado.classList.add('selecionada');
+    atualizarReflexao(indice, imgFundo);
+  }
+
+  function atualizarReflexao(indice, imgFundo) {
+    const texto = fonte[indice];
+    const img = `${imagensPath}fundo-${zero((imgFundo?imgFundo:fRandom(1,21)),2)}.jpg`;
+
+    imgReflexao.src = img;
+    textoReflexao.textContent = texto;
+	 	if(localStorage.getItem('confLinkshare')!='false') {
+	linkApp = `
+⭐️ Meus Favoritos
+Baixe na Play Store:
+${linkPlayStore}
+`;
+} else linkApp = "";
+
+    const textoShare = encodeURIComponent(
+`
+${titulo}
+
+${texto}
+${linkApp}`);
+
+    btnWA.onclick = () => window.open(`https://api.whatsapp.com/send?text=${textoShare}`, '_blank');
+    btnFB.onclick = () => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(linkPlayStore)}&quote=${textoShare}`, '_blank');
+    btnTW.onclick = () => window.open(`https://x.com/intent/tweet?text=${textoShare}`, '_blank');
+    //btnTG.onclick = () => window.open(`https://t.me/share/url?url=${encodeURIComponent(linkPlayStore)}&text=${textoShare}`, '_blank');
+  }
+
+// inicia na primeira
+const primeiroItem = container.querySelector('.menu-item');
+if (primeiroItem) {
+  const primeiraImg = primeiroItem.querySelector('img');
+  const primeiroImgFundo = primeiraImg ? primeiraImg.src : `${imagensPath}fundo-01.jpg`;
+  selecionarReflexao(inicio, primeiroItem, null);
+  imgReflexao.src = primeiroImgFundo; // 🔹 carrega a mesma imagem da miniatura
+}
+
+  // Fecha modal
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') modal.remove(); });
+
+  const closeJan = document.getElementById("closeJan");
+  closeJan.addEventListener("click", () => {
+  	modal.remove();
+  });
+
+}
+
+const reflexoesBtn = document.getElementById("reflexoesBtn");
+reflexoesBtn.addEventListener("click", () => {
+	abrirReflexoes();
+});
+
+
+if(localStorage.getItem('confPensamentos')=='true') {
+	setTimeout(function() {
+		abrirReflexoes();
+	},1024*2);
+}
+
+</script>
+
+<script>
+// --- FECHAR MODAIS COM ESC ---
+document.addEventListener("keydown", e => {
+    if (e.key === "Escape") {
+        // Dispara um click no modal ativo para fechá-lo
+        const modais = document.querySelectorAll(".dynamic-modal-overlay, .confirm-overlay, .alerta-overlay, .modal, .window, .message, .confirm, .btn-cancel, #helpModal, #alertBotao, #btnImportarCancelar");
+        modais.forEach(modal => {
+            if (modal.style.display !== "none") {
+                modal.click(); // dispara o evento de clique que fecha a janela
+            }
+        });
+    }
+});
+
+aplicarTamanhoImg(false);
+
+</script>
+
+<script src="js/cropper.min.js"></script>
+
+</body>
+</html>
