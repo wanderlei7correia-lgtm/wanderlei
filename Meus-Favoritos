@@ -18,7 +18,7 @@ body {
 	font-family: sans-serif;
 	background:#f0f2f5;
 	margin:0;
-	padding:12px;
+	padding:6px;
 	font-size:14px;
 /*
 	user-select: none;
@@ -111,7 +111,8 @@ h1 { margin:0 0 10px 0; font-size:1.4rem; }
   cursor:default;
 }
 .card a { text-decoration:none; color:#222; display:flex; flex-direction:column; align-items:center; gap:6px; }
-.card img{ width:40px; height:40px; border-radius:8px;}
+.card img{ width:40px; height:40px; border-radius:8px;transition: all .2s;}
+.card img:hover{ transform: scale(1.5);}
 .card span.title { 
   display:block; 
   word-break:break-word;
@@ -145,7 +146,7 @@ h1 { margin:0 0 10px 0; font-size:1.4rem; }
 .card .actions button:active { transform:scale(.95); }
 
 /* === PASTA === */
-.folder { background:#fff; border:1px solid #ccc; border-radius:10px; padding:12px 8px; margin:7px 0; position:relative; }
+.folder { background:#fff; border:.5px solid #ddd; border-radius:10px; padding:12px 8px; margin:7px 0; position:relative; }
 .folder .header { display:flex; align-items:center; gap:8px; padding-right:48px; cursor:pointer; }
 .folder .title { 
   flex:1 1 auto; 
@@ -224,11 +225,11 @@ h1 { margin:0 0 10px 0; font-size:1.4rem; }
   }
 }
 
-#footer {
-  border:1px solid #e0e0e0;
+.footer {
+  border:.5px solid #ddd;
   margin-top: 8px;
   padding: 14px 12px;
-  background: #fff;
+  background:#fff;
   color: #333;
   border-radius: 10px;
   text-align: center;
@@ -236,19 +237,19 @@ h1 { margin:0 0 10px 0; font-size:1.4rem; }
   box-shadow: 0 -2px 6px rgba(0,0,0,0.1);
 }
 
-#footer .footer-title {
+.footer .footer-title {
   font-size: 1.2rem;
   _font-weight: 700;
   margin-bottom: 4px;
 }
 
-#footer .footer-subtitle {
+.footer .footer-subtitle {
   font-size: 0.9rem;
   color: #666;
   margin-bottom: 2px;
 }
 
-#footer .footer-note {
+.footer .footer-note {
   font-size: 0.8rem;
   color: #aaa;
   text-decoration:none;
@@ -289,14 +290,14 @@ body[data-theme="dark"] #toolbar button {
   border-color: #444;
 }
 
-body[data-theme="dark"] #footer {
+body[data-theme="dark"] .footer {
   background-color: #222;
   color: #eee;
   border-color: #444;
 }
 
 body[data-theme="dark"] .card {
-  background-color: #444;
+  background-color: #333;
   color: #eee;
   border-color: #444;
 }
@@ -318,7 +319,7 @@ body[data-theme="dark"] .logoMF {
 }
 
 body[data-theme="dark"] .linha {
-  border-bottom: 1px solid #444;
+  border-bottom: .5px solid #444;
 }
 
 /* ESTILO DE CONFIRMACAO */
@@ -485,7 +486,7 @@ confirmarAcao('♻️ '+LANG.lang_reiniciar_app, ok => { if (ok) {
   <button id="helpBtn" class="topBotoes">❔</button>
   <button id="privacyBtn" class="topBotoes">🔒</button>
   <button id="resetBtn" class="topBotoes">🗑️</button>
-  <div style="clear:both;margin-bottom:8px;"></div>
+  <div style="clear:both;margin-bottom:4px;"></div>
 
 <div id="toolbar">
   <button id="editModeBtn"><span id="lang_editar">✏️ Editar</span></button>
@@ -585,6 +586,19 @@ input[type="checkbox"] {
     <p><button id="btnImportarConfirmar" class="btn-ok foldersButton"><span id="lang_importar">Importar</button>
     <button id="btnImportarCancelar" class="btn-cancel foldersButton"><span id="lang_cancelar">Cancelar</button></p>
   </div>
+</div>
+
+<div id="divLogo" style="position:absolute;left:10px;bottom:10px;right:10px;">
+
+	<footer class="footer" id="footer">
+
+	  <div class="footer-title">Meus Favoritos</div>
+	  <div class="footer-subtitle">Copyright &copy; 2025 Série Manancial</div>
+
+	  <a class="footer-note" href="mailto:seriemanancial@gmail.com?subject=Suporte Meus Favoritos">seriemanancial@gmail.com</a>
+	  <div class="footer-note"><span id="lang_sup_cont">Suporte e Contato</div>
+	</footer>
+
 </div>
 
 <script>
@@ -1208,7 +1222,7 @@ document.addEventListener('deviceready', () => {
         e.stopPropagation();
         if (!editMode) return;
 
-        const basePath = cordova.file.applicationDirectory + "www/img/";
+        const basePath = cordova.file.applicationDirectory + "www/icones/";
         let lastDir = sessionStorage.getItem("lastDir") || basePath;
 
         function listDirectory(path) {
@@ -1238,7 +1252,7 @@ document.addEventListener('deviceready', () => {
 
             const nav = document.createElement("div");
             nav.className = "cf-path";
-            nav.innerText = path.replace(basePath, "www/img/");
+            nav.innerText = path.replace(basePath, "www/icones/");
 
             const grid = document.createElement("div");
             grid.className = "cf-grid";
@@ -1248,7 +1262,7 @@ document.addEventListener('deviceready', () => {
 			const btnAppImages = document.createElement("button");
             btnAppImages.className = "cf-back";
             btnAppImages.innerText = "📂 Imagens do App";
-            btnAppImages.onclick = () => listDirectory(cordova.file.applicationDirectory + "www/img/");
+            btnAppImages.onclick = () => listDirectory(cordova.file.applicationDirectory + "www/icones/");
 			*/
 
             /*
@@ -2206,19 +2220,6 @@ window.addFolder=addFolder;
 window.exportBookmarks=exportBookmarks;
 window.addCard=()=>{ if(!editMode) return; const t=prompt("Título do favorito:"); if(!t||!t.trim()) return; const u=prompt("URL do favorito:","https://"); if(!u||!u.trim()) return; const card=createCardElement(t.trim(),u.trim()); rootGrid.appendChild(card); initCardListeners(card); lucide.createIcons(); save(); };
 </script>
-
-<div id="divLogo" style="position:absolute;left:10px;bottom:10px;right:10px;">
-
-	<footer id="footer">
-
-	  <div class="footer-title">Meus Favoritos</div>
-	  <div class="footer-subtitle">Copyright &copy; 2025 Série Manancial</div>
-
-	  <a class="footer-note" href="mailto:seriemanancial@gmail.com?subject=Suporte Meus Favoritos">seriemanancial@gmail.com</a>
-	  <div class="footer-note"><span id="lang_sup_cont">Suporte e Contato</div>
-	</footer>
-
-</div>
 
 <div id="logoMF" class="logoMF">
 	<img src="meus-favoritos-grey.png" style="width: 240px; height: 240px; filter: grayscale(100%);">
@@ -3567,12 +3568,32 @@ document.addEventListener("DOMContentLoaded", () => {
   document.body.dataset.theme = savedTheme;
   btn.textContent = savedTheme === "dark" ? "☀️" : "🌙";
 
+  // aplica fundo salvo se tema escuro
+  if (savedTheme === "dark") {
+    const bgSaved = localStorage.getItem("bgImage");
+    if (bgSaved && typeof applyBg === "function") applyBg(bgSaved);
+  }
+
   // alternar tema ao clicar
   btn.addEventListener("click", () => {
     const current = document.body.dataset.theme === "dark" ? "light" : "dark";
     document.body.dataset.theme = current;
     localStorage.setItem("theme", current);
     btn.textContent = current === "dark" ? "☀️" : "🌙";
+
+    // 🔹 Ao mudar para claro, remove o fundo e estilo translucido
+    if (current === "light") {
+      const style = document.getElementById("translucent-style");
+      if (style) style.remove();
+      document.body.style.backgroundImage = "";
+      localStorage.removeItem("bgImage");
+    }
+
+    // 🔹 Ao mudar para escuro, reaplica o fundo salvo (se houver)
+    if (current === "dark") {
+      const bgSaved = localStorage.getItem("bgImage");
+      if (bgSaved && typeof applyBg === "function") applyBg(bgSaved);
+    }
   });
 });
 </script>
@@ -3641,7 +3662,7 @@ observer.observe(document.body, { attributes: true, attributeFilter: ["data-them
   to { opacity: 1; transform: scale(1); }
 }
 
-.modal-content {
+._modal-content {
   background: #fff;
   color: #333;
   width: 90%;
@@ -4123,10 +4144,12 @@ body[data-theme="dark"] .menu-item p {
 }
 */
 
+
 body[data-theme="dark"] .reflexoes-content {
-  background-color: #ccc;
+  background-color: #ddd;
   border-color: #eee;
 }
+
 
 </style>
 
@@ -4299,6 +4322,276 @@ aplicarTamanhoImg(false);
 </script>
 
 <script src="js/cropper.min.js"></script>
+
+
+<!-- Botão para abrir o seletor de plano de fundo -->
+<button id="bgOpenBtn" title="Plano de fundo">💎️</button>
+
+<!-- BACKGROUND SELECTOR (cole uma vez no body) -->
+<style>
+/* modal */
+.bg-modal {
+  position: fixed; inset:0; display:none; align-items:center; justify-content:center;
+  background: rgba(0,0,0,0.45); z-index:99999; padding:20px;
+}
+.bg-box {
+  width: 92%; max-width:900px; background:var(--card-bg,#fff); border-radius:12px;
+  padding:18px; box-shadow:0 10px 40px rgba(0,0,0,0.35); color:var(--card-fg,#222);
+}
+.bg-grid { display:grid; grid-template-columns: repeat(auto-fill,minmax(92px,1fr)); gap:10px; }
+.bg-thumb { width:100%; height:64px; object-fit:cover; border-radius:8px; cursor:pointer; border:2px solid transparent; transition:transform .15s, border-color .15s; }
+.bg-thumb:hover { transform:translateY(-4px); }
+.bg-thumb.sel { border-color:#0a84ff; box-shadow:0 6px 18px rgba(10,132,255,0.18); }
+.bg-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:12px; }
+
+/* dark mode tweaks */
+body[data-theme="dark"] .bg-box {
+  background:#1d1d1f; color:#eee; box-shadow:0 8px 30px rgba(0,0,0,0.6);
+}
+
+/* body bg transition */
+body {
+  transition: background-image .35s ease, background-color .35s ease;
+  background-repeat:no-repeat; background-position:center center; background-size:cover;
+}
+
+/* botão do seletor */
+#bgOpenBtn {
+  position: fixed;
+  top: 200px;
+  right: 12px;
+  z-index: 9999;
+  background: rgba(255,255,255,0.5);
+  border: none;
+  border-radius: 50%;
+  width: 42px;
+  height: 42px;
+  font-size: 20px;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  transition: all .2s;
+  display:none;
+}
+#bgOpenBtn:hover {
+  background: rgba(255,255,255,0.5);
+  transform: scale(1.3);
+}
+body[data-theme="dark"] #bgOpenBtn {
+  background: rgba(40,40,40,0.3);
+  color: #eee;
+}
+</style>
+
+<script>
+(function(){
+  const BG_PATH = 'bg/';            // pasta dos fundos
+  const COUNT = 12;                 // número de imagens
+  const STORAGE_KEY = 'bgImage';    // localStorage key
+
+  // cria modal
+  const modal = document.createElement('div');
+  modal.className = 'bg-modal';
+  modal.innerHTML = `
+    <div class="bg-box" role="dialog" aria-modal="true">
+      <h3 style="margin:0 0 10px 0;" id="lang_sel_fundo">🎨 Escolher plano de fundo</h3>
+      <div style="font-size:13px;color:var(--muted,#666);margin-bottom:10px;" id="lang_aplic_fundo">Clique para aplicar em tempo real.</div>
+      <div class="bg-grid"></div>
+      <div class="bg-actions">
+        <button id="bgRestoreBtn" style="padding:8px 12px;border-radius:8px;border:none;cursor:pointer;"><span id="lang_desativar">Desativar</span></button>
+        <button id="bgCloseBtn" style="padding:8px 12px;border-radius:8px;border:none;background:#0a84ff;color:#fff;cursor:pointer;"><span id="lang_sair">sair</span></button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+
+  const grid = modal.querySelector('.bg-grid');
+  const closeBtn = modal.querySelector('#bgCloseBtn');
+  const restoreBtn = modal.querySelector('#bgRestoreBtn');
+
+  // cria miniaturas
+  for (let i=1;i<=COUNT;i++){
+    const n = String(i).padStart(2,'0');
+    const img = document.createElement('img');
+    img.className = 'bg-thumb';
+    img.dataset.file = `fundo-${n}.jpg`;
+    img.src = `${BG_PATH}fundo-${n}.jpg`;
+    img.alt = `Fundo ${n}`;
+    img.onclick = () => {
+      applyBg(img.dataset.file);
+      selectThumb(img);
+      localStorage.setItem(STORAGE_KEY, img.dataset.file);
+    };
+    grid.appendChild(img);
+  }
+
+  function selectThumb(el){
+    grid.querySelectorAll('.bg-thumb').forEach(t=>t.classList.remove('sel'));
+    if(el) el.classList.add('sel');
+  }
+
+  // aplica o fundo no body (real-time) + CSS sob demanda
+function applyBg(file){
+  if(!file){ 
+    document.body.style.backgroundImage = ''; 
+    return; 
+  }
+
+  // 🔹 Força o modo escuro ao aplicar fundo
+  if (document.body.dataset.theme !== 'dark') {
+    document.body.dataset.theme = 'dark';
+    localStorage.setItem('theme', 'dark'); // se você salva o tema
+
+const themeBtn = document.getElementById('toggleTheme');
+if (themeBtn) themeBtn.textContent = '☀️';	
+  }
+
+  document.body.style.backgroundImage = `url("${BG_PATH}${file}")`;
+
+  // injeta CSS translucido sob demanda (somente dark)
+  if (!document.getElementById('translucent-style')) {
+    const style = document.createElement('style');
+    style.id = 'translucent-style';
+    style.textContent = `
+
+body[data-theme="dark"] .topBotoes,
+body[data-theme="dark"] .card, 
+body[data-theme="dark"] .footer, 
+body[data-theme="dark"] .folder {
+  background: rgba(25, 25, 25, 0.5);
+}
+
+body[data-theme="dark"] .sync-box,
+body[data-theme="dark"] .dynamic-modal,
+body[data-theme="dark"] .reflexoes-content,
+body[data-theme="dark"] .menu-item,
+body[data-theme="dark"] .confirm-box, 
+body[data-theme="dark"] div.alerta-box, 
+body[data-theme="dark"] .modal-content, 
+body[data-theme="dark"] div.modal-content, 
+body[data-theme="dark"] div.bg-box {
+  background: rgba(55, 55, 55, 0.8);
+}
+
+body[data-theme="dark"] #toolbar button {
+  background: rgba(30, 30, 30, 0.6);
+  border: 1px solid rgba(255,255,255,0.1);
+}
+      `;
+      document.head.appendChild(style);
+    }
+  }
+
+  // restaura padrão (remove bg e CSS)
+function restoreDefault(){
+  localStorage.removeItem(STORAGE_KEY);
+  document.body.style.backgroundImage = '';
+  const style = document.getElementById('translucent-style');
+  if (style) style.remove();
+  grid.querySelectorAll('.bg-thumb').forEach(t=>t.classList.remove('sel'));
+}
+
+  // carrega último fundo salvo
+function loadStored(){
+  const v = localStorage.getItem(STORAGE_KEY);
+  const theme = document.body.dataset.theme;
+  if(v && theme === 'dark'){
+    applyBg(v);
+    const match = grid.querySelector(`img[data-file="${v}"]`);
+    if(match) selectThumb(match);
+  } else {
+    restoreDefault();
+  }
+}
+  // abre/fecha modal
+  window.openBgChooser = function(){ modal.style.display='flex'; loadStored(); };
+  closeBtn.addEventListener('click', ()=> modal.style.display='none');
+  modal.addEventListener('click', e=> { if(e.target===modal) modal.style.display='none'; });
+  restoreBtn.addEventListener('click', ()=> { restoreDefault(); });
+
+  document.addEventListener('DOMContentLoaded', loadStored);
+})();
+
+// botão abre seletor
+document.getElementById("bgOpenBtn").addEventListener("click", openBgChooser);
+</script>
+
+<script>
+(function() {
+  const btn = document.getElementById("bgOpenBtn");
+  const POS_KEY = "bgOpenBtnPos";
+
+  // Carrega posição salva
+  const saved = JSON.parse(localStorage.getItem(POS_KEY));
+  if (saved) {
+    btn.style.top = saved.top + "px";
+    btn.style.left = saved.left + "px";
+    btn.style.right = "auto";
+  }
+
+  let dragging = false;
+  let offsetX, offsetY;
+
+  // --- Desktop ---
+  btn.addEventListener("mousedown", e => {
+    dragging = true;
+    offsetX = e.clientX - btn.offsetLeft;
+    offsetY = e.clientY - btn.offsetTop;
+    btn.style.transition = "none";
+  });
+
+  document.addEventListener("mousemove", e => {
+    if (!dragging) return;
+    const x = e.clientX - offsetX;
+    const y = e.clientY - offsetY;
+    btn.style.left = x + "px";
+    btn.style.top = y + "px";
+    btn.style.right = "auto";
+  });
+
+  document.addEventListener("mouseup", () => {
+    if (!dragging) return;
+    dragging = false;
+    btn.style.transition = "all .2s";
+    localStorage.setItem(POS_KEY, JSON.stringify({
+      top: btn.offsetTop,
+      left: btn.offsetLeft
+    }));
+  });
+
+  // --- Mobile (touch) ---
+  btn.addEventListener("touchstart", e => {
+    const t = e.touches[0];
+    dragging = true;
+    offsetX = t.clientX - btn.offsetLeft;
+    offsetY = t.clientY - btn.offsetTop;
+    btn.style.transition = "none";
+  }, { passive: true });
+
+  document.addEventListener("touchmove", e => {
+    if (!dragging) return;
+    const t = e.touches[0];
+    const x = t.clientX - offsetX;
+    const y = t.clientY - offsetY;
+    btn.style.left = x + "px";
+    btn.style.top = y + "px";
+    btn.style.right = "auto";
+  }, { passive: true });
+
+  document.addEventListener("touchend", () => {
+    if (!dragging) return;
+    dragging = false;
+    btn.style.transition = "all .2s";
+    localStorage.setItem(POS_KEY, JSON.stringify({
+      top: btn.offsetTop,
+      left: btn.offsetLeft
+    }));
+  });
+
+  setTimeout(() => {
+    if (btn) btn.style.display = "inline";
+  }, 1536);
+})();
+</script>
+
 
 </body>
 </html>
